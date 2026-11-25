@@ -721,11 +721,12 @@ events.addEventListener("done", async ({ data }) => {
 
 ## 2. 체인 (여러 신호가 겹친 위험)
 
-## 3. 발견 상세 (WS 영역 순 → 심각도 순)
-### [HIGH] SQL 인젝션 — app/routes.py:42
-- 분류: WS-05 · OWASP A05:2025 Injection · CWE-89 · 신뢰도 Likely
-- 무엇이: … / 왜 위험한가: … / 어떻게 고치나: … (+ 수정 전·후 코드)
-- 이 결과가 증명하지 않는 것: …
+## 3. 발견 상세 (규칙별 묶음, WS 영역 순 → 심각도 순)
+### [HIGH] SQL 인젝션 — 2곳
+- 분류: WS-05 · OWASP A05:2025 Injection · CWE-89
+- 무엇이: … / 왜 위험한가: … / 어떻게 고치나: … / 하지 말 것: … (설명은 규칙마다 한 번)
+- 위치: app/routes.py:42 · Likely (+ 마스킹된 근거) / app/admin.py:17 · Likely …
+- 수정 예시 (수정 전·후 코드) · 이 결과가 증명하지 않는 것: …
 - 수정안 (ChatGPT, 검증됨): diff + 코드 밖에서 할 일
 - ChatGPT 판단 (사용한 경우): …
 
