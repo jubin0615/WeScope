@@ -148,8 +148,10 @@ async function guard(action) {
 }
 
 async function loadResult() {
+  const id = state.repoId;
   const last = repo()?.last_scan;
-  state.result = last ? await api(`/api/scans/${last.id}`) : null;
+  const result = last ? await api(`/api/scans/${last.id}`) : null;
+  if (state.repoId === id) state.result = result;   // 기다리는 사이 다른 프로젝트를 골랐으면 버린다
 }
 
 async function selectRepo(id) {
@@ -178,9 +180,10 @@ async function started({ repo: added, scan_id }) {
 }
 
 async function rescan() {
-  const { scan_id } = await api("/api/scans", { method: "POST", body: { repo_id: state.repoId } });
-  state.failed = null;
-  watch({ scan_id, repo_id: state.repoId, status: "queued", stage: null });
+  const repoId = state.repoId;   // 기다리는 사이 프로젝트를 바꿔도 요청한 프로젝트에 붙인다
+  const { scan_id } = await api("/api/scans", { method: "POST", body: { repo_id: repoId } });
+  if (state.repoId === repoId) state.failed = null;
+  watch({ scan_id, repo_id: repoId, status: "queued", stage: null });
   render();
 }
 
@@ -196,9 +199,9 @@ function watch(job) {
   });
   const finish = (failed) => ({ data }) => guard(async () => {
     stop();
-    const mine = job.repo_id === state.repoId;
     delete state.jobs[job.repo_id];
     state.repos = await api("/api/repos");
+    const mine = job.repo_id === state.repoId;   // 목록을 받는 사이 프로젝트를 바꿨을 수 있어 받은 뒤에 본다
     if (mine && failed) state.failed = JSON.parse(data).error || "알 수 없는 오류";
     if (mine && !failed) { state.failed = null; await loadResult(); }
     render();
