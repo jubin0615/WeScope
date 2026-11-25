@@ -342,6 +342,9 @@ collector  analyzers  engine  llm   report / store
 | `tests/fixtures/expected/` | 표본 파일 안의 `# expect: 규칙` 주석 | 기대값이 코드 바로 위에 있어 어긋날 수 없다. 파일 단위 발견만 테스트에 적는다 |
 | `tests/test_rules_semgrep.py`의 표본 | `tests/semgrep_samples/` + `# ruleid:` / `# ok:` 주석 | Semgrep 표준 주석 형식 |
 | `tests/fixtures/results/` | (B6에서 생성) | 서버 단계에서 실제 스캔으로 만든다 |
+| `store/results.py`, `history.py` | + `store/lock.py` (`~/.wescope/scan.lock`) | 서버 작업 큐와 서버 없이 도는 hook이 같은 이력에 동시에 쓰지 않게 |
+| `scan.py`의 `run_scan()` | + `scan_repo(repo_id)` | `run_scan`은 저장 없이 검사만(테스트·수정안 검증), `scan_repo`는 직전 결과·오탐·꺼 둔 규칙을 store에서 읽고 결과를 저장 (작업 큐·hook이 호출) |
+| `report/markdown.py` | 발견을 규칙별로 묶는다 | 같은 설명이 반복되지 않게 (대시보드 목록과 같은 묶음) |
 
 - Semgrep 규칙의 같은 rule_id 변형(다른 언어·패턴)은 `inject-xss--js`처럼 `--` 뒤에 이름을 붙인다. 한국어 메타는 원본 하나에만 둔다.
 - Semgrep은 임시 스냅샷에 We-Scope 전용 `.semgrepignore`를 써서 실행한다 (사용자 저장소 설정·Semgrep 기본값에 결과가 흔들리지 않게). Windows 한국어 로케일 때문에 `PYTHONUTF8=1`로 실행한다.

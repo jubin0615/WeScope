@@ -5,12 +5,17 @@ from pathlib import Path
 SRC = Path(__file__).parent.parent / "src" / "wescope"
 
 FORBIDDEN = {
-    "models": ("wescope.collector", "wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.taxonomy"),
-    "taxonomy": ("wescope.collector", "wescope.analyzers", "wescope.engine", "wescope.scan"),
-    "collector": ("wescope.analyzers", "wescope.engine", "wescope.scan"),
-    "analyzers": ("wescope.engine", "wescope.scan"),
+    "models": ("wescope.collector", "wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.taxonomy",
+               "wescope.store", "wescope.report"),
+    "taxonomy": ("wescope.collector", "wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store"),
+    "collector": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store", "wescope.report"),
+    "analyzers": ("wescope.engine", "wescope.scan", "wescope.store", "wescope.report"),
     "engine": ("wescope.analyzers.secrets", "wescope.analyzers.routes", "wescope.analyzers.semgrep",
-               "wescope.analyzers.config", "wescope.analyzers.registry", "wescope.collector.snapshot", "wescope.scan"),
+               "wescope.analyzers.config", "wescope.analyzers.registry", "wescope.collector.snapshot", "wescope.scan",
+               "wescope.store", "wescope.report"),
+    # 저장·보고서는 결과를 옮길 뿐 판단하지 않는다
+    "store": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.report"),
+    "report": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store", "wescope.collector"),
 }
 
 

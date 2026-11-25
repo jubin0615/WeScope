@@ -1,4 +1,5 @@
 """스냅샷: 검사 대상을 임시 폴더로 옮긴다. 원본 폴더에는 아무것도 쓰지 않는다."""
+import hashlib
 import re
 import shutil
 import subprocess
@@ -26,7 +27,11 @@ class Target:
 
     @property
     def repo_id(self) -> str:
-        return re.sub(r"[^A-Za-z0-9._-]+", "_", self.location.split("://")[-1]).strip("_.")
+        """`읽기 쉬운 이름-위치 해시`. 이름만으로는 /app/one과 /app_one이 겹치므로 위치 전체의 해시를 붙인다.
+        영문·숫자·_·-만 써서 그대로 폴더 이름이 된다 (store.results의 검사 규칙과 같다)."""
+        name = re.sub(r"[^A-Za-z0-9]+", "_", self.location.rstrip("/\\").split("://")[-1]).strip("_")[-40:].strip("_")
+        digest = hashlib.sha256(f"{self.kind}|{self.location}".encode()).hexdigest()[:12]
+        return f"{name}-{digest}" if name else digest
 
 
 @dataclass
