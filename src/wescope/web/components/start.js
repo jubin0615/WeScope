@@ -43,26 +43,29 @@ export function renderStart(root, { api, onStarted }) {
         h("li", { textContent: "GitHub 주소는 이 PC로 내려받은 뒤 검사해요." }),
         h("li", { textContent: "ChatGPT 분석은 나중에 직접 켰을 때만 써요. 보내는 것은 설정 창에서 확인할 수 있어요." }))));
 
+  let busy = false;   // 요청 중에는 입력을 고쳐도 버튼을 다시 켜지 않는다 (두 번 등록 방지)
   const show = (message) => { error.textContent = message || ""; error.hidden = !message; };
   const update = () => {
     branch.wrap.hidden = !github.input.value.trim();
     const { body, error: problem } = target(path.input.value, github.input.value, branch.input.value);
-    submit.disabled = !body;
+    submit.disabled = busy || !body;
     show(problem);
   };
   form.addEventListener("input", update);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const { body } = target(path.input.value, github.input.value, branch.input.value);
-    if (!body) return;
+    if (busy || !body) return;
+    busy = true;
     submit.disabled = true;
     submit.textContent = "시작하는 중…";
     try {
       onStarted(await api("/api/repos", { method: "POST", body }));
     } catch (err) {
-      show(err.message);
+      busy = false;
       submit.textContent = "검사 시작";
-      submit.disabled = false;
+      update();
+      show(err.message);
     }
   });
 
