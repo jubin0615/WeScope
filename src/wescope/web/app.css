@@ -1,0 +1,87 @@
+/* 디자인 토큰 — 값은 DASHBOARD.md §2. 컴포넌트는 토큰만 쓴다.
+   강조 그라데이션은 로고 색(청록→초록→연두). 라이트는 흰 글자 대비 4.5 이상이 되게 같은 계열 한 단계 진한 색. */
+@font-face {
+  font-family: Pretendard;
+  src: url("/static/fonts/PretendardVariable.woff2") format("woff2");
+  font-weight: 45 920;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #F6F8FB; --surface: #FFFFFF; --surface-2: #F1F4F8; --border: #E3E8EF;
+  --text: #101828; --text-2: #4F5B6B; --text-3: #6B7584;
+  --accent: #047857; --accent-2: #2563C9; --accent-grad: linear-gradient(90deg, #0F766E, #047857, #4D7C0F); --on-accent: #FFFFFF;
+  --select: #EEF6F2; --hover: #F3F6FA;
+  --tint-green: #E8F6EF; --tint-blue: #EAF0FD; --tint-amber: #FDF3E3;
+  --diff-add: #067647; --diff-add-bg: #ECFDF3; --diff-remove: #B42318; --diff-remove-bg: #FEF3F2;
+  --focus: #2563C9; --overlay: rgb(16 24 40 / 30%);
+  --sev-critical: #C01F3C; --sev-high: #C2410C; --sev-medium: #A15C07; --sev-low: #1D5FC9; --sev-info: #5B6576;
+  --chrome-bg: #FFFFFF; --chrome-fg: #101828; --chrome-line: #E3E8EF;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+  --shadow-sm: 0 1px 3px rgb(16 24 40 / 6%); --shadow-lg: 0 16px 48px rgb(16 24 40 / 16%);
+  --font: Pretendard, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --mono: "D2Coding", "JetBrains Mono", Consolas, monospace;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0E141B; --surface: #151D26; --surface-2: #1B2530; --border: #26313D;
+  --text: #E6EDF4; --text-2: #AAB4C2; --text-3: #8592A3;
+  --accent: #34D399; --accent-2: #8AB6FF; --accent-grad: linear-gradient(90deg, #5EEAD4, #34D399, #BEF264); --on-accent: #0E141B;
+  --select: #1B2A2A; --hover: #1A232D;
+  --tint-green: #15302A; --tint-blue: #18263D; --tint-amber: #33291A;
+  --diff-add: #6EE7B7; --diff-add-bg: #12302A; --diff-remove: #FDA29B; --diff-remove-bg: #3A1C1C;
+  --focus: #8AB6FF; --overlay: rgb(0 0 0 / 55%);
+  --sev-critical: #FF8FA3; --sev-high: #FFA570; --sev-medium: #F2C14E; --sev-low: #8AB6FF; --sev-info: #A3ADBB;
+  --chrome-bg: #151D26; --chrome-fg: #E6EDF4; --chrome-line: #26313D;
+}
+
+/* 바탕 */
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-width: 1280px; background: var(--bg); color: var(--text);
+  font: 14px/1.6 var(--font); letter-spacing: -0.01em; font-variant-numeric: tabular-nums;
+}
+h1, h2, p { margin: 0; }
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* 공통 */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+.btn { min-height: 40px; padding: 0 var(--s5); border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface); font-weight: 600; cursor: pointer; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn:disabled { cursor: not-allowed; opacity: 0.5; }
+.btn-primary { border: 0; background: var(--accent-grad); color: var(--on-accent); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-grad); filter: brightness(0.94); }
+.field { display: block; margin-top: var(--s4); }
+.field > span { display: block; margin-bottom: var(--s2); font-size: 13px; font-weight: 600; color: var(--text-2); }
+.field input { width: 100%; padding: 10px var(--s3); border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); }
+.field input::placeholder { color: var(--text-3); }
+.error { margin-top: var(--s2); color: var(--sev-critical); font-size: 13px; }
+.muted { color: var(--text-2); }
+/* 로고: 글자("We-Scope")는 화면 읽기용으로 두고, 테마에 맞는 SVG를 배경으로 그린다 (가로:세로 = 384:80) */
+.brand { --logo-h: 28px; height: var(--logo-h); width: calc(var(--logo-h) * 4.8); overflow: hidden; text-indent: 100%; white-space: nowrap;
+  background: url("/static/logo-light.svg") left center / contain no-repeat; }
+[data-theme="dark"] .brand { background-image: url("/static/logo-dark.svg"); }
+
+/* 시작 화면 (DASHBOARD.md §3-1) */
+.start { width: 640px; margin: 72px auto; padding: var(--s8); }
+.start .brand { --logo-h: 40px; }
+.start-lead { margin: var(--s2) 0 var(--s4); color: var(--text-2); }
+.start-or { margin-top: var(--s4); font-size: 13px; color: var(--text-3); }
+.start-actions { display: flex; justify-content: flex-end; margin-top: var(--s6); }
+.notice { margin-top: var(--s6); padding: var(--s4) var(--s5); border-radius: var(--r-md); background: var(--tint-blue); font-size: 13px; }
+.notice h2 { margin-bottom: var(--s2); font-size: 14px; }
+.notice ul { margin: 0; padding-left: 0; list-style: none; }
+.notice li { padding-left: 1.4em; text-indent: -1.4em; }
+.notice li::before { content: "· "; color: var(--text-2); }
+.notice li.yes::before { content: "✓ "; color: var(--accent); }
+
+/* 자리표시 (F2에서 목록 화면으로 바뀜) */
+.placeholder { width: 640px; margin: 72px auto; padding: var(--s8); }
+.placeholder p { margin-top: var(--s3); }

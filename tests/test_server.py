@@ -43,12 +43,16 @@ def test_ticket_becomes_cookie_and_is_required():
     with TestClient(create_app(TICKET, PORT), base_url=BASE) as c:
         assert c.get("/api/state").status_code == 401
         assert c.get("/").status_code == 401
+        assert c.get("/static/app.css").status_code == 401                    # 정적 파일도 티켓 필요
         assert c.get("/?ticket=wrong").status_code == 401
         resp = c.get(f"/?ticket={TICKET}", follow_redirects=False)
         assert resp.status_code == 303 and resp.headers["location"] == "/"     # 주소창에서 티켓을 지운다
         assert "httponly" in resp.headers["set-cookie"].lower() and "samesite=strict" in resp.headers["set-cookie"].lower()
         assert c.get("/api/state").json() == {"repos": 0, "last_repo": None, "running": None}
         assert c.get("/healthz").json()["app"] == "wescope"
+        assert c.get("/static/app.css").headers["content-type"].startswith("text/css")
+        assert c.get("/static/fonts/PretendardVariable.woff2").status_code == 200
+        assert c.get("/static/%2e%2e/server/app.py").status_code == 404           # web/ 밖은 못 읽음
 
 
 def test_rejects_other_hosts_and_origins(client):
