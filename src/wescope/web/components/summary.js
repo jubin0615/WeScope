@@ -2,6 +2,8 @@
 import { h, SEVERITIES, sevClass } from "../dom.js";
 
 export function renderSummary(el, { result, severity, showChanges, onSeverity, onTab }) {
+  const file = (format, label) => h("a", { className: "menu-item", href: `/api/scans/${result.scan_id}/export?format=${format}`, download: "", textContent: label,
+    onclick: (event) => { event.currentTarget.closest("details").open = false; } });
   const { summary } = result;
   const sevButtons = SEVERITIES.map((s) => {
     const count = summary.severity[s];
@@ -24,5 +26,8 @@ export function renderSummary(el, { result, severity, showChanges, onSeverity, o
     showChanges && h("div", { className: "counts" }, change("NEW", "new", summary.new), change("FIXED", "fixed", summary.fixed)),
     h("span", { className: "spacer" }),
     h("span", { className: "risk", title: "심각도·신뢰도로 계산한 참고 숫자예요. 안전 점수가 아니에요." },
-      `위험 점수 ${summary.risk_score} ⓘ`)].filter(Boolean));
+      `위험 점수 ${summary.risk_score} ⓘ`),
+    h("details", { className: "report-menu popover" },
+      h("summary", { textContent: "보고서 ↓" }),
+      h("div", { className: "menu menu-right" }, file("md", "한국어 보고서 (Markdown)"), file("json", "결과 JSON")))].filter(Boolean));
 }

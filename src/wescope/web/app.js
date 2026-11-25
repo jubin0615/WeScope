@@ -1,10 +1,12 @@
 // 상태·API·SSE·화면 조립. 화면은 ScanResult JSON과 ARCHITECTURE.md §7-1 API만 쓴다.
-import { h, SEVERITIES, sevClass } from "./dom.js";
+import { h, SEVERITIES } from "./dom.js";
 import { renderStart } from "./components/start.js";
 import { renderTopbar, renderProgress } from "./components/topbar.js";
 import { renderSummary } from "./components/summary.js";
 import { renderTabs } from "./components/tabs.js";
 import { TABS, groups, tabCounts, keepSelection, renderList } from "./components/list.js";
+import { renderDetail } from "./components/detail.js";
+import { renderCoverage } from "./components/coverage.js";
 
 const root = document.getElementById("app");
 const OFFLINE = "서버와 연결이 끊겼어요. 터미널에서 wescope를 다시 실행하세요.";
@@ -17,7 +19,9 @@ const EMPTY = {
 };
 
 const state = {
-  repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null, ...loadView(),
+  repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null,
+  names: { ws: {}, owasp: {} },   // GET /api/catalog: 코드값 → 이름. 못 받으면 코드만 보인다
+  ...loadView(),
 };
 const parts = {};     // 다시 그릴 때 유지하는 영역 (목록 스크롤 위치 보존)
 const sources = {};   // 프로젝트별로 지켜보는 검사의 SSE. 다른 프로젝트 검사를 시작해도 앞선 검사를 놓치지 않는다
@@ -43,7 +47,7 @@ export async function api(path, { method = "GET", body } = {}) {
 function loadView() {
   try {
     const saved = JSON.parse(localStorage.getItem("wescope.view")) || {};
-    return { tab: TABS.includes(saved.tab) ? saved.tab : "all", severity: SEVERITIES.includes(saved.severity) ? saved.severity : null };
+    return { tab: [...TABS, "coverage"].includes(saved.tab) ? saved.tab : "all", severity: SEVERITIES.includes(saved.severity) ? saved.severity : null };
   } catch {
     return { tab: "all", severity: null };
   }
@@ -54,8 +58,9 @@ function saveView() {
 
 const repo = () => state.repos.find((r) => r.id === state.repoId);
 const jobHere = () => state.jobs[state.repoId] ?? null;
-const visibleTabs = (result) =>
-  TABS.filter((t) => ((t !== "new" && t !== "fixed") || result.baseline_scan) && (t !== "ai" || result.ai));
+const visibleTabs = (result) => [
+  ...TABS.filter((t) => ((t !== "new" && t !== "fixed") || result.baseline_scan) && (t !== "ai" || result.ai)),
+  "coverage"];
 
 // ---------- 그리기 ----------
 
@@ -70,7 +75,7 @@ function renderTop() {
   if (parts.top?.querySelector("details[open]")) return;   // 프로젝트 메뉴를 보는 중이면 닫지 않는다
   renderTopbar(parts.top,
     { repos: state.repos, repo: repo(), result: state.result, job: jobHere(), failed: state.failed, offline: state.offline },
-    { selectRepo: (id) => guard(() => selectRepo(id)), addRepo, rescan: () => guard(rescan) });
+    { selectRepo: (id) => guard(() => selectRepo(id)), addRepo, rescan: () => guard(rescan), openCoverage: () => setTab("coverage") });
 }
 
 function firstScan() {
@@ -93,16 +98,22 @@ function dashboard(result) {
   const severity = result.summary.severity[state.severity] ? state.severity : null;
   const summary = h("div", { className: "summary" });
   renderSummary(summary, { result, severity, showChanges: Boolean(result.baseline_scan),
-    onSeverity: (s) => { state.severity = s; saveView(); render(); },
+    onSeverity: (s) => { state.severity = s; if (state.tab === "coverage") state.tab = "all"; saveView(); render(); },
     onTab: setTab });
   const tabs = h("nav", { className: "tabs", role: "tablist" });
   renderTabs(tabs, { tab, counts: tabCounts(result.findings), visible, onTab: setTab });
+  if (tab === "coverage") {
+    const pane = h("section", { className: "coverage-pane panel" });
+    renderCoverage(pane, { result, names: state.names });
+    return [summary, tabs, pane];
+  }
 
   const list = groups(result.findings, tab, severity);
   if (tab === "all" && !severity && !list.length) {
     return [summary, tabs, h("section", { className: "center panel tint-green" },
       h("p", { className: "big", textContent: "✓ 이번 검사에서 찾은 위험 후보가 없어요" }),
-      h("p", { className: "muted", textContent: "검사하지 못한 영역은 검사 범위에서 확인하세요." }))];
+      h("button", { type: "button", className: "link", textContent: "검사하지 못한 영역은 검사 범위 탭에서 확인하세요 →",
+        onclick: () => setTab("coverage") }))];
   }
   parts.list = h("aside", { className: "list-pane panel", ariaLabel: "위험 목록" });
   parts.detail = h("section", { className: "detail-pane panel", ariaLabel: "상세" });
@@ -120,13 +131,8 @@ function renderPanes(list, tab) {
   }
   renderList(parts.list, { list, tab, selected: shown, firstScan: !state.result.baseline_scan,
     onSelect: (ruleId) => { state.selected = ruleId; renderPanes(list, tab); } });
-  const group = list.find((g) => g.rule_id === shown);
-  const first = group.findings[0];
-  // shortcut: 상세 탭(수정안·설명·위치·판정 정보)은 F3의 detail.js가 이 자리를 채운다
-  parts.detail.replaceChildren(
-    h("p", { className: sevClass(group.severity), textContent: group.severity }),
-    h("h2", { className: "detail-title", textContent: first.tech_name_ko }),
-    h("p", { className: "muted", textContent: first.title_ko }));
+  renderDetail(parts.detail, { group: list.find((g) => g.rule_id === shown), tab, firstScan: !state.result.baseline_scan,
+    names: state.names, repo: repo(), result: state.result });
 }
 
 function setTab(tab) {
@@ -245,6 +251,9 @@ async function boot() {
   try {
     const info = await api("/api/state");
     state.offline = false;
+    const names = await api("/api/catalog").catch(() => null);
+    if (names) state.names = { ws: Object.fromEntries(names.ws.map((w) => [w.code, w.name_ko])),
+      owasp: Object.fromEntries(names.owasp.map((o) => [o.code, o.name])) };
     state.repos = info.repos ? await api("/api/repos") : [];
     state.repoId = info.running?.repo_id ?? info.last_repo ?? state.repos[0]?.id ?? null;
     await loadResult();
@@ -257,7 +266,7 @@ async function boot() {
 }
 
 setInterval(() => state.result && !jobHere() && renderTop(), 60000);   // "n분 전" 갱신
-document.addEventListener("click", (event) => {   // 프로젝트 메뉴 바깥을 누르면 닫는다
-  for (const menu of document.querySelectorAll("details.project-menu[open]")) if (!menu.contains(event.target)) menu.open = false;
+document.addEventListener("click", (event) => {   // 펼친 메뉴(프로젝트·보고서) 바깥을 누르면 닫는다
+  for (const menu of document.querySelectorAll("details.popover[open]")) if (!menu.contains(event.target)) menu.open = false;
 });
 boot();

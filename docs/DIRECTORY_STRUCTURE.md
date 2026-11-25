@@ -166,6 +166,7 @@ WeScope/
 │           ├── index.html
 │           ├── app.js            # 상태 관리, API·SSE, 화면 조립
 │           ├── dom.js            # h() 화면 조각 도우미, 심각도 목록
+│           ├── wording.js        # 상태 코드 한국어 표기 (report/wording.py와 같은 문자열, 테스트로 확인)
 │           ├── components/
 │           │   ├── start.js      #   시작 화면: 입력 2개(폴더 경로 / GitHub 주소), 프로젝트 추가 창
 │           │   ├── topbar.js     #   로고 · 프로젝트 선택 · 상태 문장·진행 표시 · ChatGPT 상태 · ⚙ · [다시 스캔]
@@ -173,7 +174,7 @@ WeScope/
 │           │   ├── tabs.js       #   보기 탭 (전체·NEW·FIXED·AI·오탐 표시·검사 범위)
 │           │   ├── list.js       #   왼쪽 위험 목록: 묶기·정렬·선택 유지
 │           │   ├── detail.js     #   오른쪽 상세: 수정안·설명·위치·판정 정보 탭, 하단 버튼
-│           │   ├── diffview.js   #   diff 뷰어 (추가·삭제 줄, 마스킹)
+│           │   ├── diffview.js   #   diff 뷰어 (추가·삭제 줄, 마스킹) — B8 ChatGPT 수정안과 함께
 │           │   ├── prompt.js     #   수정 요청 프롬프트 조립 (검증된 diff 포함, 비밀값 원문 없음)
 │           │   ├── coverage.js   #   검사 범위 탭 (WS·OWASP·ChatGPT 검토 범위)
 │           │   └── settings.js   #   설정 창 (화면 가운데, 폭 640px)

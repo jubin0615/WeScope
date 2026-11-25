@@ -86,3 +86,29 @@ test("상태 문장 시각: 방금 · n분 전 · n시간 전 · 날짜", async 
   assert.equal(relTime(ago(5 * 3600e3), now), "5시간 전");
   assert.equal(relTime(new Date(2026, 10, 20, 9, 5).toISOString(), now), "11월 20일 09:05");
 });
+
+test("프롬프트: 근거 코드(비밀값 조각)를 넣지 않는다 — canary 0건", async () => {
+  const { groups } = await load("components/list.js");
+  const { buildPrompt } = await load("components/prompt.js");
+  const result = structuredClone(fixture("secrets-git.json"));
+  result.findings.forEach((f, i) => { f.evidence = `KEY="sk_live_CANARY${i}"`; });
+  const repo = { name: "landing-page", branch: "main" };
+  for (const group of groups(result.findings, "all")) {
+    const text = buildPrompt({ repo, result, group });
+    assert.doesNotMatch(text, /CANARY/, group.rule_id);
+    assert.match(text, /발급처에서 폐기·재발급/);                          // WS-01 묶음
+  }
+});
+
+test("프롬프트: 형식 — 프로젝트·문제·위치(10곳까지)·수정 방법", async () => {
+  const { groups } = await load("components/list.js");
+  const { buildPrompt } = await load("components/prompt.js");
+  const result = structuredClone(fixture("first-scan.json"));
+  const sql = groups(result.findings, "all").find((g) => g.rule_id === "inject-sql");
+  const text = buildPrompt({ repo: { name: "shop", branch: null }, result, group: sql });
+  assert.match(text, /^\[We-Scope 보안 수정 요청\]\n프로젝트: shop\n문제: SQL 인젝션.* — HIGH · CWE-89 · OWASP A05:2025\n위치: app\.py:36\n/);
+  assert.match(text, /수정 예시:\n```\n/);
+  assert.doesNotMatch(text, /발급처/);                                    // WS-01이 아니면 없음
+  const many = { ...sql, findings: Array.from({ length: 12 }, (_, i) => ({ ...sql.findings[0], location: { file: "a.py", line: i + 1, route: null } })) };
+  assert.match(buildPrompt({ repo: { name: "shop" }, result, group: many }), /위치: a\.py:1, .*a\.py:10 외 2곳\n/);
+});
