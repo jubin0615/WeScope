@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass
 
 from wescope.paths import home
 
+COOKIE = "wescope_ticket"   # 접속 티켓을 담는 쿠키. hook도 이 이름으로 티켓을 보낸다
+
 
 @dataclass
 class Running:

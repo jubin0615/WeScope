@@ -16,8 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from wescope.server import api_repos, api_scans, api_state
 from wescope.server.jobs import Jobs
-
-COOKIE = "wescope_ticket"
+from wescope.server.state import COOKIE
 WEB_DIR = Path(__file__).parent.parent / "web"
 
 

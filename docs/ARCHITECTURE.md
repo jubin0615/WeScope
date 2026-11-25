@@ -39,8 +39,8 @@ We-Scope는 **대시보드 하나로 쓰는 로컬 도구**다. 사용자가 터
 post-commit hook은 사용자가 쓰는 명령이 아니라 **설치된 패키지의 내부 모듈**을 호출한다.
 
 ```sh
-# .git/hooks/post-commit  (대시보드의 "자동 검사 켜기"가 설치, 기존 hook이 있으면 뒤에 덧붙임)
-"<설치된 python 경로>" -m wescope.hook --repo "<저장소>" --commit "$(git rev-parse HEAD)" >/dev/null 2>&1 &
+# .git/hooks/post-commit  (로컬 Git 폴더를 연결하면 설치(기본 켬), 기존 hook은 그대로 두고 shebang 다음 줄에 넣음)
+'<설치된 python 경로>' -m wescope.hook --repo <repo-id> --commit "$(git rev-parse HEAD)" >/dev/null 2>&1 & # wescope-hook <repo-id>
 ```
 
 | 서버 상태 | 처리 |
@@ -49,6 +49,13 @@ post-commit hook은 사용자가 쓰는 명령이 아니라 **설치된 패키�
 | 꺼져 있음 | `wescope.hook`이 ChatGPT 없이 직접 검사해 결과·이력 저장 → 다음에 `wescope`로 열면 최신 결과가 보임 |
 
 자동 검사는 **로컬 Git 폴더 프로젝트에만** 있다. Git이 아닌 폴더와 GitHub 주소 프로젝트는 [다시 스캔]으로 검사한다.
+
+- 위치는 `git rev-parse --git-path hooks/post-commit` (worktree를 따른다). `core.hooksPath`가 `.git` 밖(husky의 `.husky/` 등)을 가리키면 지원하지 않는다: 그 파일은 커밋될 수 있어 내 PC의 Python 경로가 팀 저장소로 퍼진다 (`Repo.hook == null`, 켜기 400).
+- 끝에 덧붙이지 않는 이유: 기존 hook이 `exit`로 끝나면 실행되지 않는다. 셸 스크립트가 아닌 hook에는 넣지 않는다(켜기 400).
+- 켜짐 여부는 **지금 Python 경로로 된 줄**이 있을 때만 `true`다. We-Scope를 다른 Python으로 다시 설치해 옛 경로 줄만 남으면(조용히 실패하는 줄) `false`로 보이고, 다시 켜면 새 경로로 바뀐다.
+- python 경로는 작은따옴표 + `/`로 적어 Git for Windows의 sh에서도 그대로 돈다. 끄기·연결 해제는 `wescope-hook <repo-id>` 줄만 지우고, 남은 것이 shebang뿐이면 파일을 지운다.
+- 서버에는 `server.json`의 티켓을 `wescope_ticket` 쿠키로 보낸다 (대시보드와 같은 검사를 거친다).
+- 서버가 없을 때의 디바운스: `~/.wescope/hook-<repo-id>.last`에 커밋을 적고 3초 기다린 뒤, 돌던 검사가 끝나길 기다렸다가 그 사이 더 새 커밋이 없을 때만 검사한다. 서버가 있으면 작업 큐가 저장소별 대기 작업을 하나로 합친다.
 
 ---
 
@@ -350,13 +357,13 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 ### 7-1. 구현된 API 형식 (B6 동결)
 
 > 이 표와 `tests/fixtures/results/*.json`이 대시보드와 서버 사이의 계약이다. 바꾸려면 이 표 → 서버 → 샘플·테스트 순으로 바꾼다.
-> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. 표에 없는 행(hook·이력·오탐·수정안·전역 설정·로그인)은 B7·B8에서 추가한다.
+> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. 표에 없는 행(수정안·로그인)은 B8에서 추가한다. B7에서 추가한 행은 `(B7)`로 표시했다.
 
 | 요청 | 성공 응답 | 실패 |
 |---|---|---|
 | `GET /?ticket=…` | `303 → /` + `wescope_ticket` 쿠키 (HttpOnly, SameSite=Strict) | 401 |
 | `GET /healthz` (티켓 불필요) | `{"app": "wescope", "pid": 1234}` | — |
-| `GET /api/state` | `{"repos": 2, "last_repo": "<repo_id>" \| null, "running": Job \| null}` | — |
+| `GET /api/state` | `{"repos": 2, "last_repo": "<repo_id>" \| null, "running": Job \| null, "latest_scan": "<scan_id>" \| null}` — `latest_scan`(B7)은 모든 저장소 중 마지막 검사. 화면은 5초마다 확인해 처음 보는 `running`은 SSE로 지켜보고, `latest_scan`이 바뀌면 목록·결과를 다시 읽는다 (커밋 자동 검사를 알림 없이 반영) | — |
 | `GET /api/catalog` (F3 추가) | `{"ws": [{"code": "WS-01", "name_ko": "비밀값 노출"}, …], "owasp": [{"code": "A01:2025", "name": "Broken Access Control"}, …]}` — 화면이 코드값에 붙이는 이름 | — |
 | `GET /api/repos` | `[Repo, …]` | — |
 | `POST /api/repos` `{"path": "…"}` 또는 `{"github": "https://github.com/o/r", "branch"?: "…"}` (+ `"name"?`) | `201 {"repo": Repo, "scan_id": "…"}` — 바로 첫 검사를 큐에 넣음 | 400 (둘 다/둘 다 없음, 없는 폴더, GitHub 형식 아님) |
@@ -367,8 +374,17 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `GET /api/scans/{scan_id}` | ScanResult JSON (§4) | 404, 409 (아직 검사 중) |
 | `GET /api/scans/{scan_id}/events` | SSE. `event: progress` (data: Job) 0회 이상 → `event: done` 또는 `event: failed` 1회로 끝남 | 404 |
 | `GET /api/scans/{scan_id}/export?format=md\|json` | 첨부 파일 `wescope-<폴더명>-<scan_id>.<format>` | 400 (다른 format), 404 |
+| `POST /api/repos/{id}/hook` `{"enabled": bool}` (B7) | `{"hook": bool}` | 400 (GitHub·Git 아닌 폴더, hook이 `.git` 밖(husky 등), 셸이 아닌 기존 hook), 404 |
+| `POST /api/hook-trigger` `{"repo_id"}` (B7, hook 전용) | `202 {"scan_id"}` — trigger `hook`. 같은 저장소가 대기 중이면 그 scan_id | 404 |
+| `GET /api/repos/{id}/history?limit=50` (B7, 최대 500) | `[ScanSummary, …]` 최근 검사부터 | 404 |
+| `GET /api/repos/{id}/ignores` (B7) | `[{"fingerprint", "reason", "created_at"}, …]` 표시한 순서 | 404 |
+| `POST /api/repos/{id}/ignores` `{"fingerprint", "reason"?}` (B7) | `201` + 위 목록. **다음 검사부터** 그 발견이 `dismissed` (지금 결과 JSON은 바뀌지 않음) | 400 (지문 형식, 이유 500자 초과), 404 (최근 결과에 없는 지문) |
+| `DELETE /api/repos/{id}/ignores/{fingerprint}` (B7) | `204` — 다음 검사부터 다시 `open` | 404 |
+| `GET /api/settings` (B7) | `{"theme": "system"\|"light"\|"dark"}` — `~/.wescope/config.toml` | — |
+| `POST /api/settings` (B7, 보낸 항목만 바뀜) | 위와 같은 형식 | 400 (허용 값 아님) |
 
-- **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "last_scan": {"id", "scanned_at", "trigger", "commit_sha", "baseline", "risk_score", "summary"} | null}`
+- **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "hook": bool | null, "last_scan": ScanSummary | null}` — `hook`(B7)은 hook 파일에서 바로 읽은 자동 검사 켜짐 여부, 로컬 Git 폴더가 아니거나 hook이 `.git` 밖이면 `null`. 로컬 Git 폴더는 연결할 때 켠다 (PRD P6 기본 켬)
+- **ScanSummary**: `{"id", "scanned_at", "trigger", "commit_sha", "baseline", "risk_score", "summary"}`
 - **Job**: `{"scan_id", "repo_id", "trigger": "manual"|"hook", "status": "queued"|"running"|"done"|"failed", "stage": "collect"|"analyze"|"organize"|"save"|null, "error", "summary"}`
 - SSE는 0.2초마다 **현재 상태**를 보낸다. 빠른 스캔에서는 중간 단계가 생략될 수 있으니 화면은 마지막으로 받은 `stage`만 보여 준다.
 - 작업 큐는 한 번에 1개만 돈다. 서버를 끄면(Ctrl+C) 돌던 스캔은 끝까지 마치고 대기 작업은 버린다.

@@ -6,7 +6,8 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import materialize
+from conftest import git, materialize
+from wescope.paths import home
 from wescope.models.scan_result import ScanResult
 from wescope.server.api_scans import job_events
 from wescope.server.app import COOKIE, create_app
@@ -48,7 +49,7 @@ def test_ticket_becomes_cookie_and_is_required():
         resp = c.get(f"/?ticket={TICKET}", follow_redirects=False)
         assert resp.status_code == 303 and resp.headers["location"] == "/"     # 주소창에서 티켓을 지운다
         assert "httponly" in resp.headers["set-cookie"].lower() and "samesite=strict" in resp.headers["set-cookie"].lower()
-        assert c.get("/api/state").json() == {"repos": 0, "last_repo": None, "running": None}
+        assert c.get("/api/state").json() == {"repos": 0, "last_repo": None, "running": None, "latest_scan": None}
         assert c.get("/healthz").json()["app"] == "wescope"
         names = c.get("/api/catalog").json()
         assert [w["code"] for w in names["ws"]] == [f"WS-{i:02}" for i in range(1, 11)] and names["ws"][4]["name_ko"] == "입력값 주입"
@@ -179,3 +180,61 @@ def test_queue_merges_waiting_requests_and_survives_failures():
     jobs.stop()
     assert (first.status, second.status, bad.status) == ("done", "done", "failed")
     assert bad.error == "검사 실패" and calls == ["a", "a", "bad"]
+
+
+def test_hook_history_and_ignores(client, tmp_path):
+    root, _ = materialize("vuln_flask", tmp_path)
+    git(root, "init", "-q")
+    added = client.post("/api/repos", json={"path": str(root)}).json()
+    repo_id = added["repo"]["id"]
+    assert added["repo"]["hook"] is True                         # 로컬 Git 폴더는 연결하면 자동 검사 켬 (PRD P6)
+    hook_file = root / ".git" / "hooks" / "post-commit"
+    assert repo_id in hook_file.read_text(encoding="utf-8")
+    first = wait(client, added["scan_id"])[-1][1]["scan_id"]
+
+    assert client.post(f"/api/repos/{repo_id}/hook", json={"enabled": False}).json() == {"hook": False}
+    assert client.get("/api/repos").json()[0]["hook"] is False and not hook_file.exists()
+    assert client.post(f"/api/repos/{repo_id}/hook", json={"enabled": True}).json() == {"hook": True}
+
+    finding = next(f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["severity"] == "HIGH")
+    fp = finding["fingerprint"]
+    assert client.post(f"/api/repos/{repo_id}/ignores", json={"fingerprint": "zz"}).status_code == 400
+    assert client.post(f"/api/repos/{repo_id}/ignores", json={"fingerprint": "0" * 16}).status_code == 404
+    marked = client.post(f"/api/repos/{repo_id}/ignores", json={"fingerprint": fp, "reason": " 테스트 코드 "})
+    assert marked.status_code == 201
+    assert [(i["fingerprint"], i["reason"]) for i in marked.json()] == [(fp, "테스트 코드")] and marked.json()[0]["created_at"]
+    assert client.get(f"/api/repos/{repo_id}/ignores").json() == marked.json()
+
+    hooked = client.post("/api/hook-trigger", json={"repo_id": repo_id}).json()["scan_id"]   # hook이 부르는 경로
+    wait(client, hooked)
+    result = client.get(f"/api/scans/{hooked}").json()
+    assert result["trigger"] == "hook" and result["summary"]["dismissed"] >= 1
+    assert next(f for f in result["findings"] if f["fingerprint"] == fp)["status"] == "dismissed"   # 다음 검사에 반영
+    assert client.get("/api/state").json()["latest_scan"] == hooked
+    assert [s["id"] for s in client.get(f"/api/repos/{repo_id}/history").json()] == [hooked, first]
+    assert client.get(f"/api/repos/{repo_id}/history?limit=1").json()[0]["trigger"] == "hook"
+
+    assert client.delete(f"/api/repos/{repo_id}/ignores/{fp}").status_code == 204
+    assert client.delete(f"/api/repos/{repo_id}/ignores/{fp}").status_code == 404
+    again = client.post("/api/scans", json={"repo_id": repo_id}).json()["scan_id"]
+    wait(client, again)
+    assert next(f for f in client.get(f"/api/scans/{again}").json()["findings"] if f["fingerprint"] == fp)["status"] == "open"
+
+    assert client.delete(f"/api/repos/{repo_id}").status_code == 204
+    assert not hook_file.exists()                                # 연결 해제하면 우리 hook 줄도 지운다
+
+
+def test_hook_needs_local_git_folder_and_global_settings(client, tmp_path):
+    root, _ = materialize("clean_app", tmp_path)
+    added = client.post("/api/repos", json={"path": str(root)}).json()
+    assert added["repo"]["hook"] is None
+    assert client.post(f"/api/repos/{added['repo']['id']}/hook", json={"enabled": True}).status_code == 400
+    assert client.post("/api/hook-trigger", json={"repo_id": "nope"}).status_code == 404
+    for path in ("/api/repos/nope/history", "/api/repos/nope/ignores"):
+        assert client.get(path).status_code == 404
+
+    assert client.get("/api/settings").json() == {"theme": "system"}
+    assert client.post("/api/settings", json={"theme": "blue"}).status_code == 400
+    assert client.post("/api/settings", json={"theme": "dark"}).json() == {"theme": "dark"}
+    assert client.post("/api/settings", json={}).json() == {"theme": "dark"}   # 보낸 항목만 바뀐다
+    assert 'theme = "dark"' in (home() / "config.toml").read_text(encoding="utf-8")

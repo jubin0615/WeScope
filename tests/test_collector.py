@@ -87,3 +87,22 @@ def test_github_target_scans_latest_commit(tmp_path):
     git(work, "push", "-q", str(remote), "main")
     with collect(target) as ctx:                               # 두 번째는 fetch로 최신을 받는다
         assert ctx.source["commit"] != first and "second.py" in ctx.files
+
+
+def test_subfolder_project_sees_gitignore_at_repo_root(tmp_path, monkeypatch):
+    """저장소의 하위 폴더를 연결하면 스냅샷에 루트 .gitignore가 없다. 그래도 '.gitignore 없음'으로 잡지 않는다."""
+    monkeypatch.setattr("wescope.analyzers.semgrep.find_semgrep", lambda: None)
+    root = tmp_path / "mono"
+    sub = root / "web"
+    sub.mkdir(parents=True)
+    (sub / "app.py").write_text("print('hi')\n")
+    git(root, "init", "-q")
+
+    def hygiene():
+        return [f.evidence for f in run_scan(Target("folder", str(sub))).findings if f.rule_id == "git-hygiene"]
+
+    assert hygiene() == [".gitignore 파일이 없어요"]
+    (root / ".gitignore").write_text(".env*\n*.pem\n")
+    assert hygiene() == ["등록되지 않은 패턴: *.key, serviceAccountKey*.json, *.tfstate"]
+    (sub / ".gitignore").write_text("*.key\nserviceAccountKey*.json\n*.tfstate\n")   # 하위 폴더 것과 합쳐서 판정
+    assert hygiene() == []
