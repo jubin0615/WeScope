@@ -1,0 +1,570 @@
+{
+  "scan_id": "23a0b062f84f",
+  "scanned_at": "2026-11-25T06:28:56+00:00",
+  "trigger": "manual",
+  "source": {
+    "kind": "folder",
+    "location": "/home/me/projects/api-server",
+    "git": false
+  },
+  "commit": null,
+  "baseline_scan": null,
+  "profile": {
+    "languages": {
+      "javascript": 1
+    },
+    "frameworks": [
+      "express"
+    ],
+    "manifests": []
+  },
+  "analyzers": [
+    {
+      "id": "secrets",
+      "categories": [
+        "WS-01"
+      ],
+      "languages": [
+        "*"
+      ],
+      "status": "ok",
+      "elapsed": 0.001,
+      "note": ""
+    },
+    {
+      "id": "semgrep",
+      "categories": [
+        "WS-05",
+        "WS-02",
+        "WS-06"
+      ],
+      "languages": [
+        "javascript",
+        "python",
+        "typescript"
+      ],
+      "status": "skipped",
+      "elapsed": 0.0,
+      "note": "semgrep이 설치되어 있지 않아요"
+    },
+    {
+      "id": "routes",
+      "categories": [
+        "WS-02"
+      ],
+      "languages": [
+        "javascript",
+        "python",
+        "typescript"
+      ],
+      "status": "ok",
+      "elapsed": 0.001,
+      "note": ""
+    },
+    {
+      "id": "config",
+      "categories": [
+        "WS-06"
+      ],
+      "languages": [
+        "python"
+      ],
+      "status": "not_applicable",
+      "elapsed": 0.0,
+      "note": ""
+    },
+    {
+      "id": "insecure_defaults",
+      "categories": [
+        "WS-06"
+      ],
+      "languages": [
+        "javascript",
+        "python",
+        "typescript"
+      ],
+      "status": "ok",
+      "elapsed": 0.0,
+      "note": ""
+    }
+  ],
+  "coverage": [
+    {
+      "code": "WS-01",
+      "state": "vulnerable",
+      "findings": 1,
+      "notes": []
+    },
+    {
+      "code": "WS-02",
+      "state": "vulnerable",
+      "findings": 3,
+      "notes": [
+        "semgrep: semgrep이 설치되어 있지 않아요"
+      ]
+    },
+    {
+      "code": "WS-03",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-04",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-05",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "semgrep: semgrep이 설치되어 있지 않아요"
+      ]
+    },
+    {
+      "code": "WS-06",
+      "state": "vulnerable",
+      "findings": 4,
+      "notes": [
+        "semgrep: semgrep이 설치되어 있지 않아요"
+      ]
+    },
+    {
+      "code": "WS-07",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-08",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-09",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-10",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    }
+  ],
+  "owasp_coverage": [
+    {
+      "code": "A01:2025",
+      "state": "vulnerable",
+      "findings": 2,
+      "notes": []
+    },
+    {
+      "code": "A02:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A03:2025",
+      "state": "skipped",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A04:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A05:2025",
+      "state": "skipped",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A06:2025",
+      "state": "skipped",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A07:2025",
+      "state": "vulnerable",
+      "findings": 4,
+      "notes": []
+    },
+    {
+      "code": "A08:2025",
+      "state": "skipped",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A09:2025",
+      "state": "manual",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A10:2025",
+      "state": "vulnerable",
+      "findings": 2,
+      "notes": []
+    }
+  ],
+  "findings": [
+    {
+      "rule_id": "secret-hardcoded",
+      "category": "WS-01",
+      "cwe": "CWE-798",
+      "owasp": "A07:2025",
+      "severity": "HIGH",
+      "confidence": "Likely",
+      "title_ko": "비밀키가 코드에 그대로 들어 있어요",
+      "tech_name_ko": "하드코딩된 인증정보",
+      "why_ko": "저장소를 본 누구나 이 키로 외부 서비스를 쓰거나 요금을 발생시킬 수 있어요. 한 번 커밋되면 지워도 Git 기록에 남아요.",
+      "fix_ko": "키를 바로 폐기·재발급하고, 환경변수로 옮긴 뒤 .env를 .gitignore에 추가하세요.",
+      "avoid_ko": "코드에서 키 줄만 지우고 끝내지 마세요. 이미 노출된 키는 재발급해야 해요.",
+      "fix_example": "# 수정 전\nclient = OpenAI(api_key=\"sk-abcd...\")\n# 수정 후\nclient = OpenAI(api_key=os.environ[\"OPENAI_API_KEY\"])\n",
+      "limitations_ko": "키가 실제로 유효한지는 확인하지 않습니다.",
+      "location": {
+        "file": "server.js",
+        "line": 16,
+        "end_line": null,
+        "route": null
+      },
+      "evidence": "const STRIPE_KEY = \"sk_l••••\";",
+      "fingerprint": "42f07c38ec069f89",
+      "id": "F-001",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "flow",
+      "scope": null,
+      "extra": {
+        "kind": "stripe"
+      },
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "authz-idor",
+      "category": "WS-02",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "severity": "HIGH",
+      "confidence": "Potential",
+      "title_ko": "주소의 번호만 바꾸면 다른 사람 데이터를 볼 수 있어 보여요",
+      "tech_name_ko": "IDOR (소유자 확인 없는 객체 조회)",
+      "why_ko": "로그인한 사용자가 URL의 id만 바꿔서 다른 사람의 주문·글·개인정보를 읽거나 바꿀 수 있어요.",
+      "fix_ko": "조회 조건에 현재 사용자를 함께 넣거나, 꺼낸 데이터의 소유자가 현재 사용자인지 확인하세요.",
+      "avoid_ko": "id를 추측하기 어렵게(UUID) 바꾸는 것만으로 끝내지 마세요.",
+      "fix_example": "# 수정 전\norder = Order.query.get_or_404(order_id)\n# 수정 후\norder = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()\n",
+      "limitations_ko": "같은 함수 안의 소유자 조건만 확인했어요. 다른 계층(서비스·DB 정책)에서 확인하는지는 보지 못했어요.",
+      "location": {
+        "file": "server.js",
+        "line": 19,
+        "end_line": null,
+        "route": "GET /api/orders/:id"
+      },
+      "evidence": "app.get(\"/api/orders/:id\", async (req, res) => {",
+      "fingerprint": "6c44eddb347d7fdb",
+      "id": "F-002",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "absence",
+      "scope": {
+        "function": "GET /api/orders/:id",
+        "route": "GET /api/orders/:id",
+        "span": [
+          19,
+          22
+        ]
+      },
+      "extra": {
+        "route": "GET /api/orders/:id"
+      },
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "authz-admin-route",
+      "category": "WS-02",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "severity": "HIGH",
+      "confidence": "Potential",
+      "title_ko": "관리자 기능을 관리자가 아니어도 쓸 수 있어 보여요",
+      "tech_name_ko": "관리자 경로 권한 확인 누락",
+      "why_ko": "화면에서 메뉴를 숨겨도 API 주소를 알면 누구나 호출할 수 있어요. 일반 사용자가 다른 사람 계정을 지우거나 권한을 바꿀 수 있어요.",
+      "fix_ko": "관리자 라우트마다 서버에서 관리자 역할을 확인하세요 (데코레이터·미들웨어·의존성).",
+      "avoid_ko": "로그인 여부만 확인하거나 프론트엔드에서만 막지 마세요.",
+      "fix_example": "# 수정 전\n@app.route(\"/admin/users/<int:user_id>\", methods=[\"DELETE\"])\n@login_required\ndef delete_user(user_id): ...\n# 수정 후\n@app.route(\"/admin/users/<int:user_id>\", methods=[\"DELETE\"])\n@login_required\n@admin_required\ndef delete_user(user_id): ...\n",
+      "limitations_ko": "상위 미들웨어·리버스 프록시·게이트웨이의 권한 확인은 보지 못했어요.",
+      "location": {
+        "file": "server.js",
+        "line": 25,
+        "end_line": null,
+        "route": "DELETE /admin/users/:id"
+      },
+      "evidence": "app.delete(\"/admin/users/:id\", requireLogin, async (req, res) => {",
+      "fingerprint": "15ed37a74172db45",
+      "id": "F-003",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "absence",
+      "scope": {
+        "function": "DELETE /admin/users/:id",
+        "route": "DELETE /admin/users/:id",
+        "span": [
+          25,
+          28
+        ]
+      },
+      "extra": {
+        "route": "DELETE /admin/users/:id"
+      },
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "authz-no-auth-write",
+      "category": "WS-02",
+      "cwe": "CWE-306",
+      "owasp": "A07:2025",
+      "severity": "HIGH",
+      "confidence": "Potential",
+      "title_ko": "로그인하지 않아도 데이터를 바꾸는 API를 부를 수 있어 보여요",
+      "tech_name_ko": "인증 없는 쓰기 API",
+      "why_ko": "누구나 이 API로 데이터를 만들거나 고치거나 지울 수 있어요.",
+      "fix_ko": "쓰기 라우트에 인증 확인(데코레이터·미들웨어·의존성)을 붙이세요.",
+      "avoid_ko": "요청 본문에 user_id를 받아서 그 값을 믿는 방식으로 인증을 대신하지 마세요.",
+      "fix_example": "// 수정 전\nrouter.post(\"/posts\", async (req, res) => { await Post.create(req.body) })\n// 수정 후\nrouter.post(\"/posts\", requireAuth, async (req, res) => { await Post.create({ ...req.body, userId: req.user.id }) })\n",
+      "limitations_ko": "상위 미들웨어·게이트웨이의 인증은 보지 못했어요.",
+      "location": {
+        "file": "server.js",
+        "line": 31,
+        "end_line": null,
+        "route": "POST /api/posts"
+      },
+      "evidence": "app.post(\"/api/posts\", async (req, res) => {",
+      "fingerprint": "e91616134fde9789",
+      "id": "F-004",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "absence",
+      "scope": {
+        "function": "POST /api/posts",
+        "route": "POST /api/posts",
+        "span": [
+          31,
+          34
+        ]
+      },
+      "extra": {
+        "route": "POST /api/posts"
+      },
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "config-default-credential",
+      "category": "WS-06",
+      "cwe": "CWE-1392",
+      "owasp": "A07:2025",
+      "severity": "HIGH",
+      "confidence": "Likely",
+      "title_ko": "누구나 아는 기본 계정(admin/admin)이 들어 있어요",
+      "tech_name_ko": "기본 계정·비밀번호",
+      "why_ko": "공격자가 가장 먼저 시도하는 조합이에요. 그대로 배포되면 관리자로 바로 로그인할 수 있어요.",
+      "fix_ko": "기본 계정을 지우고, 첫 관리자는 설치할 때 강한 비밀번호로 만들게 하세요.",
+      "avoid_ko": "비밀번호만 admin123 같은 다른 쉬운 값으로 바꾸지 마세요.",
+      "fix_example": "# 수정 전\nif username == \"admin\" and password == \"admin\":\n# 수정 후\nuser = User.query.filter_by(username=username).first()\nif user and check_password_hash(user.password_hash, password):\n",
+      "limitations_ko": "같은 줄의 문자열 조합으로 판단했어요.",
+      "location": {
+        "file": "server.js",
+        "line": 61,
+        "end_line": null,
+        "route": null
+      },
+      "evidence": "if (username === \"admin\" && password === \"password\") {",
+      "fingerprint": "793c8bd27bcae368",
+      "id": "F-005",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "flow",
+      "scope": null,
+      "extra": {},
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "config-fail-open",
+      "category": "WS-06",
+      "cwe": "CWE-636",
+      "owasp": "A10:2025",
+      "severity": "HIGH",
+      "confidence": "Likely",
+      "title_ko": "인증 확인에서 오류가 나면 통과시켜 버려요",
+      "tech_name_ko": "실패 시 허용 (fail-open)",
+      "why_ko": "공격자가 일부러 잘못된 토큰을 보내 오류를 일으키면 인증을 건너뛸 수 있어요.",
+      "fix_ko": "예외가 나면 거부(False·401·403)하도록 바꾸세요.",
+      "avoid_ko": "모든 예외를 잡아서 다음 단계로 넘기지 마세요.",
+      "fix_example": "# 수정 전\ntry:\n    return verify(token)\nexcept Exception:\n    return True\n# 수정 후\nexcept Exception:\n    return False\n",
+      "limitations_ko": "함수 이름으로 인증·권한 함수인지 추정했어요.",
+      "location": {
+        "file": "server.js",
+        "line": 76,
+        "end_line": null,
+        "route": null
+      },
+      "evidence": "} catch (e) { next(); }",
+      "fingerprint": "1b051a4373a0bd9e",
+      "id": "F-006",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "flow",
+      "scope": null,
+      "extra": {},
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "config-tls-verify-off",
+      "category": "WS-06",
+      "cwe": "CWE-295",
+      "owasp": "A07:2025",
+      "severity": "MEDIUM",
+      "confidence": "Likely",
+      "title_ko": "외부 서버의 인증서를 확인하지 않고 통신해요",
+      "tech_name_ko": "TLS 인증서 검증 해제",
+      "why_ko": "중간에서 통신을 가로채는 공격자가 가짜 서버 행세를 해도 알아챌 수 없어서, 주고받는 데이터와 키가 노출될 수 있어요.",
+      "fix_ko": "검증 해제 옵션을 지우세요. 사설 인증서라면 그 CA 인증서 경로를 지정하세요.",
+      "avoid_ko": "인증서 오류를 없애려고 검증을 끄지 마세요.",
+      "fix_example": "# 수정 전\nrequests.get(url, verify=False)\n# 수정 후\nrequests.get(url)  # 또는 verify=\"/path/to/ca.pem\"\n",
+      "limitations_ko": "테스트 코드에서만 쓰이는지는 확인하지 않았어요.",
+      "location": {
+        "file": "server.js",
+        "line": 13,
+        "end_line": null,
+        "route": null
+      },
+      "evidence": "process.env.NODE_TLS_REJECT_UNAUTHORIZED = \"0\";",
+      "fingerprint": "87b844670005ba8a",
+      "id": "F-007",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "flow",
+      "scope": null,
+      "extra": {},
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
+      "rule_id": "config-error-exposure",
+      "category": "WS-06",
+      "cwe": "CWE-209",
+      "owasp": "A10:2025",
+      "severity": "MEDIUM",
+      "confidence": "Likely",
+      "title_ko": "오류 내용을 사용자에게 그대로 보여 줘요",
+      "tech_name_ko": "오류·스택트레이스 노출",
+      "why_ko": "오류 메시지에 파일 경로, SQL 문장, 라이브러리 버전이 담겨 공격자가 다음 공격을 준비하는 데 쓰여요.",
+      "fix_ko": "사용자에게는 일반 메시지만 돌려주고, 자세한 오류는 서버 로그에만 남기세요.",
+      "avoid_ko": "운영에서만 끄겠다는 조건문으로 남겨 두지 마세요.",
+      "fix_example": "# 수정 전\nexcept Exception as e:\n    return {\"error\": str(e)}, 500\n# 수정 후\nexcept Exception:\n    app.logger.exception(\"주문 처리 실패\")\n    return {\"error\": \"요청을 처리하지 못했어요.\"}, 500\n",
+      "limitations_ko": "응답으로 돌려주는 코드 줄만 보고 판단했어요.",
+      "location": {
+        "file": "server.js",
+        "line": 81,
+        "end_line": null,
+        "route": null
+      },
+      "evidence": "res.status(500).json({ error: err.stack });",
+      "fingerprint": "2b8153edbb720dbd",
+      "id": "F-008",
+      "owasp_ai": [],
+      "source": "engine",
+      "confidence_source": "flow",
+      "scope": null,
+      "extra": {},
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    }
+  ],
+  "summary": {
+    "severity": {
+      "CRITICAL": 0,
+      "HIGH": 6,
+      "MEDIUM": 2,
+      "LOW": 0,
+      "INFO": 0
+    },
+    "new": 8,
+    "fixed": 0,
+    "dismissed": 0,
+    "risk_score": 85,
+    "skipped_files": 0
+  },
+  "repo": "home_me_projects_api_server-30c5fa98bb1e",
+  "ai": null,
+  "ai_coverage": [],
+  "schema_version": 1
+}

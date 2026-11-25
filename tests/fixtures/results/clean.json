@@ -1,0 +1,248 @@
+{
+  "scan_id": "098e9139f322",
+  "scanned_at": "2026-11-25T06:28:56+00:00",
+  "trigger": "manual",
+  "source": {
+    "kind": "folder",
+    "location": "/home/me/projects/shop-safe",
+    "git": false
+  },
+  "commit": null,
+  "baseline_scan": null,
+  "profile": {
+    "languages": {
+      "javascript": 1,
+      "python": 1
+    },
+    "frameworks": [
+      "express",
+      "flask"
+    ],
+    "manifests": []
+  },
+  "analyzers": [
+    {
+      "id": "secrets",
+      "categories": [
+        "WS-01"
+      ],
+      "languages": [
+        "*"
+      ],
+      "status": "ok",
+      "elapsed": 0.002,
+      "note": ""
+    },
+    {
+      "id": "semgrep",
+      "categories": [
+        "WS-05",
+        "WS-02",
+        "WS-06"
+      ],
+      "languages": [
+        "javascript",
+        "python",
+        "typescript"
+      ],
+      "status": "ok",
+      "elapsed": 4.316,
+      "note": ""
+    },
+    {
+      "id": "routes",
+      "categories": [
+        "WS-02"
+      ],
+      "languages": [
+        "javascript",
+        "python",
+        "typescript"
+      ],
+      "status": "ok",
+      "elapsed": 0.003,
+      "note": ""
+    },
+    {
+      "id": "config",
+      "categories": [
+        "WS-06"
+      ],
+      "languages": [
+        "python"
+      ],
+      "status": "ok",
+      "elapsed": 0.001,
+      "note": ""
+    },
+    {
+      "id": "insecure_defaults",
+      "categories": [
+        "WS-06"
+      ],
+      "languages": [
+        "javascript",
+        "python",
+        "typescript"
+      ],
+      "status": "ok",
+      "elapsed": 0.001,
+      "note": ""
+    }
+  ],
+  "coverage": [
+    {
+      "code": "WS-01",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "WS-02",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "WS-03",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-04",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-05",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "WS-06",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "WS-07",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-08",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-09",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    },
+    {
+      "code": "WS-10",
+      "state": "skipped",
+      "findings": 0,
+      "notes": [
+        "이 버전에서 아직 검사하지 않는 영역이에요"
+      ]
+    }
+  ],
+  "owasp_coverage": [
+    {
+      "code": "A01:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A02:2025",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A03:2025",
+      "state": "skipped",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A04:2025",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A05:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A06:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A07:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A08:2025",
+      "state": "partial",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A09:2025",
+      "state": "manual",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "A10:2025",
+      "state": "clean",
+      "findings": 0,
+      "notes": []
+    }
+  ],
+  "findings": [],
+  "summary": {
+    "severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0,
+      "INFO": 0
+    },
+    "new": 0,
+    "fixed": 0,
+    "dismissed": 0,
+    "risk_score": 0,
+    "skipped_files": 0
+  },
+  "repo": "home_me_projects_shop_safe-6466f368fbc1",
+  "ai": null,
+  "ai_coverage": [],
+  "schema_version": 1
+}

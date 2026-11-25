@@ -12,6 +12,7 @@ from wescope.collector.snapshot import Target
 from wescope.paths import home
 
 # 목록의 i번째 스크립트가 user_version i+1을 만든다. 스키마를 바꿀 때는 기존 항목을 고치지 말고 뒤에 추가한다.
+# 문장은 ';'로 나눠 실행하므로 문자열 안에 ';'를 쓰지 않는다.
 MIGRATIONS = [
     """
     CREATE TABLE repos (
@@ -30,7 +31,27 @@ MIGRATIONS = [
         repo_id TEXT NOT NULL REFERENCES repos(id) ON DELETE CASCADE, fingerprint TEXT NOT NULL,
         reason TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, PRIMARY KEY (repo_id, fingerprint));
     """,
+    "ALTER TABLE repos ADD COLUMN excludes TEXT NOT NULL DEFAULT '[]';",   # v2: 프로젝트별 제외 패턴
 ]
+
+
+def _migrate(db):
+    """마이그레이션과 버전 기록을 쓰기 잠금 안에서 한 트랜잭션으로 한다.
+    동시에 처음 연 두 프로세스 중 하나만 실행하고, 중간에 죽으면 통째로 되돌아간다."""
+    if db.execute("PRAGMA user_version").fetchone()[0] >= len(MIGRATIONS):
+        return
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        version = db.execute("PRAGMA user_version").fetchone()[0]   # 잠금을 잡은 뒤 다시 읽는다
+        for number, script in enumerate(MIGRATIONS[version:], version + 1):
+            for statement in script.split(";"):    # executescript는 먼저 commit해 버려서 문장별로 실행한다
+                if statement.strip():
+                    db.execute(statement)
+            db.execute(f"PRAGMA user_version={number}")
+        db.commit()
+    except BaseException:
+        db.rollback()
+        raise
 
 
 def _now() -> str:
@@ -43,18 +64,20 @@ def _db():
     path.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(path, timeout=30)) as db:
         db.row_factory = sqlite3.Row
-        db.execute("PRAGMA journal_mode=WAL")
+        try:
+            db.execute("PRAGMA journal_mode=WAL")   # 파일에 남는 설정: 다른 연결이 바꾸는 중이라 잠겨 있으면 그쪽에 맡긴다
+        except sqlite3.OperationalError:
+            pass
         db.execute("PRAGMA foreign_keys=ON")
-        version = db.execute("PRAGMA user_version").fetchone()[0]
-        for number, script in enumerate(MIGRATIONS[version:], version + 1):
-            db.executescript(script)
-            db.execute(f"PRAGMA user_version={number}")
+        _migrate(db)
         with db:          # 블록이 정상 종료되면 commit, 예외면 rollback
             yield db
 
 
 def _repo(row) -> dict | None:
-    return {**dict(row), "disabled_rules": json.loads(row["disabled_rules"])} if row else None
+    if not row:
+        return None
+    return {**dict(row), "disabled_rules": json.loads(row["disabled_rules"]), "excludes": json.loads(row["excludes"])}
 
 
 def add_repo(target: Target, name: str | None = None) -> dict:
@@ -86,9 +109,13 @@ def list_repos() -> list[dict]:
         return [_repo(r) for r in db.execute("SELECT * FROM repos ORDER BY created_at, id")]
 
 
-def set_disabled_rules(repo_id: str, rules: list[str]):
+def update_settings(repo_id: str, *, disabled_rules: list[str] | None = None, excludes: list[str] | None = None):
+    """프로젝트 설정. None인 항목은 그대로 둔다."""
     with _db() as db:
-        db.execute("UPDATE repos SET disabled_rules = ? WHERE id = ?", (json.dumps(sorted(set(rules))), repo_id))
+        if disabled_rules is not None:
+            db.execute("UPDATE repos SET disabled_rules = ? WHERE id = ?", (json.dumps(sorted(set(disabled_rules))), repo_id))
+        if excludes is not None:
+            db.execute("UPDATE repos SET excludes = ? WHERE id = ?", (json.dumps(excludes, ensure_ascii=False), repo_id))
 
 
 def remove_repo(repo_id: str):
@@ -105,6 +132,19 @@ def record_scan(result):
         db.executemany("INSERT INTO findings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                        [(result.scan_id, f.fingerprint, f.rule_id, f.severity, f.location.file, f.location.line,
                          f.change, f.status, f.introduced_in) for f in result.findings])
+
+
+def repo_of_scan(scan_id: str) -> str | None:
+    with _db() as db:
+        row = db.execute("SELECT repo_id FROM scans WHERE id = ?", (scan_id,)).fetchone()
+        return row["repo_id"] if row else None
+
+
+def last_scanned_repo() -> str | None:
+    """첫 화면이 보여 줄 '마지막으로 본 프로젝트'."""
+    with _db() as db:
+        row = db.execute("SELECT repo_id FROM scans ORDER BY rowid DESC LIMIT 1").fetchone()
+        return row["repo_id"] if row else None
 
 
 def latest_scan_id(repo_id: str) -> str | None:

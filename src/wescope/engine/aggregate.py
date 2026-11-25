@@ -10,13 +10,17 @@ from wescope.models.finding import SEVERITIES
 from wescope.models.scan_result import ScanResult
 
 
+def new_scan_id() -> str:
+    return uuid.uuid4().hex[:12]
+
+
 def is_open(f) -> bool:
     """요약·점수·검사 범위에 세는 발견: 열려 있고 이번 검사에서 해결되지 않은 것."""
     return f.status == "open" and f.change != "fixed"
 
 
 def aggregate(findings, statuses, ctx, *, ignored=frozenset(), disabled=frozenset(), trigger="manual",
-              repo=None, baseline_scan=None) -> ScanResult:
+              repo=None, baseline_scan=None, scan_id=None) -> ScanResult:
     for f in findings:
         if f.fingerprint in ignored or f.rule_id in disabled:
             f.status = "dismissed"     # 결과에는 남기고 점수·판정에서만 뺀다
@@ -34,7 +38,7 @@ def aggregate(findings, statuses, ctx, *, ignored=frozenset(), disabled=frozense
         "skipped_files": len(ctx.skipped),
     }
     return ScanResult(
-        scan_id=uuid.uuid4().hex[:12], scanned_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        scan_id=scan_id or new_scan_id(), scanned_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         trigger=trigger, source=ctx.source, commit=ctx.source.get("commit"), baseline_scan=baseline_scan,
         profile=asdict(ctx.profile), analyzers=statuses, coverage=ws_rows,
         owasp_coverage=coverage.owasp_coverage(current, ws_rows), findings=findings, summary=summary, repo=repo)

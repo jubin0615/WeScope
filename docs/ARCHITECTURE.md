@@ -347,6 +347,31 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 
 모든 요청은 Host·Origin을 `127.0.0.1`로 제한하고, 실행마다 발급하는 티켓을 확인한다.
 
+### 7-1. 구현된 API 형식 (B6 동결)
+
+> 이 표와 `tests/fixtures/results/*.json`이 대시보드와 서버 사이의 계약이다. 바꾸려면 이 표 → 서버 → 샘플·테스트 순으로 바꾼다.
+> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. 표에 없는 행(hook·이력·오탐·수정안·전역 설정·로그인)은 B7·B8에서 추가한다.
+
+| 요청 | 성공 응답 | 실패 |
+|---|---|---|
+| `GET /?ticket=…` | `303 → /` + `wescope_ticket` 쿠키 (HttpOnly, SameSite=Strict) | 401 |
+| `GET /healthz` (티켓 불필요) | `{"app": "wescope", "pid": 1234}` | — |
+| `GET /api/state` | `{"repos": 2, "last_repo": "<repo_id>" \| null, "running": Job \| null}` | — |
+| `GET /api/repos` | `[Repo, …]` | — |
+| `POST /api/repos` `{"path": "…"}` 또는 `{"github": "https://github.com/o/r", "branch"?: "…"}` (+ `"name"?`) | `201 {"repo": Repo, "scan_id": "…"}` — 바로 첫 검사를 큐에 넣음 | 400 (둘 다/둘 다 없음, 없는 폴더, GitHub 형식 아님) |
+| `DELETE /api/repos/{id}` | `204` — 이력·결과 JSON·전용 clone 삭제 | 404, 409 (검사 중) |
+| `GET /api/repos/{id}/settings` | `{"disabled_rules": [rule_id], "excludes": ["pattern"]}` | 404 |
+| `POST /api/repos/{id}/settings` (둘 중 보낸 것만 바뀜) | 위와 같은 형식 | 400 (모르는 규칙, 패턴 200자 초과·200개 초과), 404 |
+| `POST /api/scans` `{"repo_id": "…"}` | `202 {"scan_id": "…"}` — 같은 저장소가 이미 대기 중이면 그 scan_id | 404 |
+| `GET /api/scans/{scan_id}` | ScanResult JSON (§4) | 404, 409 (아직 검사 중) |
+| `GET /api/scans/{scan_id}/events` | SSE. `event: progress` (data: Job) 0회 이상 → `event: done` 또는 `event: failed` 1회로 끝남 | 404 |
+| `GET /api/scans/{scan_id}/export?format=md\|json` | 첨부 파일 `wescope-<폴더명>-<scan_id>.<format>` | 400 (다른 format), 404 |
+
+- **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "last_scan": {"id", "scanned_at", "trigger", "commit_sha", "baseline", "risk_score", "summary"} | null}`
+- **Job**: `{"scan_id", "repo_id", "trigger": "manual"|"hook", "status": "queued"|"running"|"done"|"failed", "stage": "collect"|"analyze"|"organize"|"save"|null, "error", "summary"}`
+- SSE는 0.2초마다 **현재 상태**를 보낸다. 빠른 스캔에서는 중간 단계가 생략될 수 있으니 화면은 마지막으로 받은 `stage`만 보여 준다.
+- 작업 큐는 한 번에 1개만 돈다. 서버를 끄면(Ctrl+C) 돌던 스캔은 끝까지 마치고 대기 작업은 버린다.
+
 ---
 
 ## 8. Collector 안전장치

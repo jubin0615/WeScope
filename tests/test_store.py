@@ -1,5 +1,7 @@
+import sqlite3
 import subprocess
 import sys
+import threading
 
 import pytest
 
@@ -40,7 +42,7 @@ def test_ignores_and_disabled_rules_apply_on_next_scan(tmp_path, no_semgrep):
     first = scan_repo(repo["id"])
     target = next(f for f in first.findings if f.rule_id == "authz-idor")
     history.ignore(repo["id"], target.fingerprint, "소유자 확인은 서비스 계층에서 해요")
-    history.set_disabled_rules(repo["id"], ["config-security-todo"])
+    history.update_settings(repo["id"], disabled_rules=["config-security-todo"])
     second = scan_repo(repo["id"])
     status = {f.fingerprint: f.status for f in second.findings}
     assert status[target.fingerprint] == "dismissed"
@@ -49,6 +51,60 @@ def test_ignores_and_disabled_rules_apply_on_next_scan(tmp_path, no_semgrep):
 
     history.unignore(repo["id"], target.fingerprint)
     assert {f.fingerprint: f.status for f in scan_repo(repo["id"]).findings}[target.fingerprint] == "open"
+
+
+def test_excluding_a_folder_does_not_mark_its_findings_fixed(tmp_path, no_semgrep):
+    """리뷰: 대시보드에서 제외 패턴을 넣으면 그 폴더의 위험이 '해결됨'으로 보이던 문제."""
+    root, _ = materialize("vuln_flask", tmp_path)
+    (root / "legacy").mkdir()
+    (root / "legacy" / "old.py").write_text("DEBUG = True\n")
+    repo = history.add_repo(Target("folder", str(root)))
+    first = scan_repo(repo["id"])
+    assert any(f.location.file == "legacy/old.py" for f in first.findings)
+    history.update_settings(repo["id"], excludes=["legacy/"])
+    second = scan_repo(repo["id"])
+    assert not [f for f in second.findings if f.location.file.startswith("legacy/")]
+    assert second.summary["fixed"] == 0
+
+
+def test_dashboard_excludes_win_over_wescopeignore_negation(tmp_path, no_semgrep):
+    """리뷰: .wescopeignore의 '!' 줄이 대시보드 제외 설정을 무르던 문제."""
+    root = tmp_path / "app"
+    (root / "gen").mkdir(parents=True)
+    (root / "gen" / "out.py").write_text("DEBUG = True\n")
+    (root / ".wescopeignore").write_text("!gen/out.py\n")
+    repo = history.add_repo(Target("folder", str(root)))
+    history.update_settings(repo["id"], excludes=["gen/out.py"])
+    assert scan_repo(repo["id"]).findings == []
+
+
+def test_migration_runs_once_under_concurrent_first_open(tmp_path):
+    """리뷰: v1 DB를 여러 곳이 동시에 처음 열면 ALTER가 두 번 돌아 'duplicate column'으로 실패하던 문제."""
+    (tmp_path / "home").mkdir()                       # conftest의 WESCOPE_HOME
+    db = sqlite3.connect(tmp_path / "home" / "history.sqlite")
+    for statement in history.MIGRATIONS[0].split(";"):
+        if statement.strip():
+            db.execute(statement)
+    db.execute("PRAGMA user_version=1")
+    db.commit()
+    db.close()
+    errors = []
+
+    def open_once():
+        try:
+            history.list_repos()
+        except Exception as error:   # noqa: BLE001 — 어떤 오류든 실패로 센다
+            errors.append(error)
+
+    threads = [threading.Thread(target=open_once) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    with sqlite3.connect(tmp_path / "home" / "history.sqlite") as check:
+        assert check.execute("PRAGMA user_version").fetchone()[0] == len(history.MIGRATIONS)
+        assert "excludes" in [row[1] for row in check.execute("PRAGMA table_info(repos)")]
 
 
 def test_remove_repo_clears_history(tmp_path, no_semgrep):
