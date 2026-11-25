@@ -756,7 +756,7 @@ git commit
    │
    ▼
 .git/hooks/post-commit   (프로젝트 추가 때 설치, 설정 창에서 끌 수 있음. 기존 hook은 그대로 두고 shebang 다음 줄에 넣음)
-   │  '<설치된 python>' -m wescope.hook --repo <repo-id> --commit <sha> &
+   │  '<설치된 python>' -P -m wescope.hook --repo <repo-id> --commit <sha> &
    │  ↑ 사용자 명령이 아닌 내부 모듈 호출, 백그라운드라 커밋이 느려지지 않음
    ▼
 ~/.wescope/server.json 의 서버가 살아 있나?

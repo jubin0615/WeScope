@@ -1,6 +1,6 @@
 """커밋 자동 검사: post-commit hook 설치·해제와 hook이 부르는 내부 진입점 (ARCHITECTURE §1-2).
 
-hook 줄:  '<python>' -m wescope.hook --repo <id> --commit "$(git rev-parse HEAD)" >/dev/null 2>&1 & # wescope-hook <id>
+hook 줄:  '<python>' -P -m wescope.hook --repo <id> --commit "$(git rev-parse HEAD)" >/dev/null 2>&1 & # wescope-hook <id>
 - 백그라운드(&)라 커밋을 느리게 하지 않고, 출력이 없어 사용자에게 아무것도 보이지 않는다.
 - 서버가 살아 있으면 서버 작업 큐에 맡기고, 없으면 디바운스 뒤 scan.lock을 잡고 직접 검사한다 (ChatGPT 없음).
 """
@@ -32,7 +32,9 @@ def _marker(repo_id: str) -> str:
 
 def _line(repo_id: str) -> str:
     python = Path(sys.executable).as_posix().replace("'", "'\\''")   # Git for Windows sh에서 역슬래시 문제 없게 / 로
-    return (f"'{python}' -m wescope.hook --repo {repo_id} --commit \"$(git rev-parse HEAD)\" "
+    # -P: hook은 저장소 폴더에서 돈다. -m은 그 폴더를 import 경로 맨 앞에 넣어 저장소의 wescope.py·json.py 등이
+    # 설치된 코드 대신 실행될 수 있다 (Python 3.11+). -I는 사용자 site-packages까지 빼서 쓰지 않는다
+    return (f"'{python}' -P -m wescope.hook --repo {repo_id} --commit \"$(git rev-parse HEAD)\" "
             f">/dev/null 2>&1 & {_marker(repo_id)}")
 
 

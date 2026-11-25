@@ -40,7 +40,7 @@ post-commit hook은 사용자가 쓰는 명령이 아니라 **설치된 패키�
 
 ```sh
 # .git/hooks/post-commit  (로컬 Git 폴더를 연결하면 설치(기본 켬), 기존 hook은 그대로 두고 shebang 다음 줄에 넣음)
-'<설치된 python 경로>' -m wescope.hook --repo <repo-id> --commit "$(git rev-parse HEAD)" >/dev/null 2>&1 & # wescope-hook <repo-id>
+'<설치된 python 경로>' -P -m wescope.hook --repo <repo-id> --commit "$(git rev-parse HEAD)" >/dev/null 2>&1 & # wescope-hook <repo-id>
 ```
 
 | 서버 상태 | 처리 |
@@ -53,7 +53,7 @@ post-commit hook은 사용자가 쓰는 명령이 아니라 **설치된 패키�
 - 위치는 `git rev-parse --git-path hooks/post-commit` (worktree를 따른다). `core.hooksPath`가 `.git` 밖(husky의 `.husky/` 등)을 가리키면 지원하지 않는다: 그 파일은 커밋될 수 있어 내 PC의 Python 경로가 팀 저장소로 퍼진다 (`Repo.hook == null`, 켜기 400).
 - 끝에 덧붙이지 않는 이유: 기존 hook이 `exit`로 끝나면 실행되지 않는다. 셸 스크립트가 아닌 hook에는 넣지 않는다(켜기 400).
 - 켜짐 여부는 **지금 Python 경로로 된 줄**이 있을 때만 `true`다. We-Scope를 다른 Python으로 다시 설치해 옛 경로 줄만 남으면(조용히 실패하는 줄) `false`로 보이고, 다시 켜면 새 경로로 바뀐다.
-- python 경로는 작은따옴표 + `/`로 적어 Git for Windows의 sh에서도 그대로 돈다. 끄기·연결 해제는 `wescope-hook <repo-id>` 줄만 지우고, 남은 것이 shebang뿐이면 파일을 지운다.
+- python 경로는 작은따옴표 + `/`로 적어 Git for Windows의 sh에서도 그대로 돈다. `-P`는 hook이 도는 저장소 폴더를 import 경로에서 빼서, 저장소의 `wescope.py`·`json.py` 같은 파일이 설치된 코드 대신 실행되지 않게 한다. 끄기·연결 해제는 `wescope-hook <repo-id>` 줄만 지우고, 남은 것이 shebang뿐이면 파일을 지운다.
 - 서버에는 `server.json`의 티켓을 `wescope_ticket` 쿠키로 보낸다 (대시보드와 같은 검사를 거친다).
 - 서버가 없을 때의 디바운스: `~/.wescope/hook-<repo-id>.last`에 커밋을 적고 3초 기다린 뒤, 돌던 검사가 끝나길 기다렸다가 그 사이 더 새 커밋이 없을 때만 검사한다. 서버가 있으면 작업 큐가 저장소별 대기 작업을 하나로 합친다.
 

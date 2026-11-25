@@ -173,3 +173,15 @@ def test_worktree_commit_does_not_leak_git_env_into_scan(repo, tmp_path, monkeyp
     main_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True,
                                env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")}).stdout.strip()
     assert hook_scans(repo["id"])[0]["commit_sha"] == main_head
+
+
+def test_hook_does_not_import_code_from_the_repository(repo, tmp_path):
+    """hook은 저장소 폴더에서 돈다. python -m은 그 폴더를 import 경로 맨 앞에 넣으므로, 저장소의 wescope.py가
+    설치된 We-Scope 대신 실행될 수 있다 (PR #7 Codex 리뷰). 실제 git commit으로 확인한다."""
+    root = Path(repo["location"])
+    marker = tmp_path / "MARKER"
+    (root / "wescope.py").write_text(f"open({str(marker)!r}, 'w').write('repo code ran')\n", encoding="utf-8")
+    hook.install(repo)
+    commit(root, "with planted module")
+    wait_for(lambda: hook_scans(repo["id"]), 120)
+    assert not marker.exists()
