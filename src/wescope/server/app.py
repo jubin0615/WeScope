@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from wescope.server import api_repos, api_scans, api_state
 from wescope.server.jobs import Jobs
@@ -65,6 +66,8 @@ def create_app(ticket: str, port: int, jobs: Jobs | None = None) -> FastAPI:
     @app.get("/")
     def index():
         return FileResponse(WEB_DIR / "index.html")
+
+    app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")   # CSS·JS·폰트. 위 guard(티켓 쿠키)를 똑같이 거친다
 
     for module in (api_state, api_repos, api_scans):
         app.include_router(module.router)
