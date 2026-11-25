@@ -695,12 +695,12 @@ events.addEventListener("done", async ({ data }) => {
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │ CRITICAL 1   HIGH 3   MEDIUM 4   LOW 1        NEW 2   FIXED 1       위험 점수 63 ⓘ  보고서 ↓ │
 ├───────────────────────────────────────┬──────────────────────────────────────────────┤
-│ CRITICAL  서버 전용 키가 브라우저로   NEW │ CRITICAL                              NEW     │
-│           전달되는 코드에 있음            │ 서버 전용 키가 브라우저로 전달되는 코드에 있어요   │
-│ HIGH      입력값으로 DB를 조회·삭제할   2곳│ WS-01 · A07:2025 · CWE-798 · Likely            │
-│           수 있음                        │ [수정안 ✓검증됨]  [설명]  [위치 1]  [판정 정보]  │
-│ HIGH      다른 사람 주문을 볼 수 있음  AI │  - const key = "eyJh••••"                     │
-│ MEDIUM    디버그 모드가 켜져 있음         │  + const key = process.env.SUPABASE_SERVICE…   │
+│ CRITICAL  서버 전용 키 노출          NEW  │ CRITICAL 서버 전용 키 노출               NEW   │
+│           AdminPanel.tsx:5               │ 서버 전용 키가 브라우저로 전달되는 코드에 있어요   │
+│ HIGH      SQL 인젝션                2곳  │ WS-01 · A07:2025 · CWE-798 · Likely            │
+│           app.py:36 외 1곳               │ [수정안 ✓검증됨]  [설명]  [위치 1]  [판정 정보]  │
+│ HIGH      IDOR                       AI  │  - const key = "eyJh••••"                     │
+│ MEDIUM    디버그 모드 활성화              │  + const key = process.env.SUPABASE_SERVICE…   │
 │ ...                                     │ [수정 요청 프롬프트 복사]  [diff 복사]  [오탐이에요] │
 └───────────────────────────────────────┴──────────────────────────────────────────────┘
 ```

@@ -321,7 +321,7 @@ collector  analyzers  engine  llm   report / store
 | `vibescan/login.py`, `session.py`, `register.py` | `llm/auth.py` | 이식 |
 | `vibescan/inference.py`, `analysis.py` | `llm/client.py`, `review.py`, `fixer.py`, `guards.py`, `prompts.py` | 고쳐서 이식 — 가드 추가, 5종 점검 계획(plan) 제거 |
 | `vibescan/hook.py` | `hook.py` | 이식 |
-| `vibescan/web/*` | `web/` | [DASHBOARD.md](DASHBOARD.md) 기준으로 다시 작성 (디자인 토큰·Pretendard·`theme.js`·진행 표시·설정 드로어는 재사용) |
+| `vibescan/web/*` | `web/` | [DASHBOARD.md](DASHBOARD.md) 기준으로 다시 작성 (Pretendard·토큰 이름 체계·진행 표시 막대·diff 색은 재사용, 다크 테마·`theme.js`는 새로 작성, 설정은 드로어 대신 가운데 창 — DASHBOARD.md §1) |
 | `vulnapp/` | `tests/fixtures/vuln_flask/` | 이식 + 같은 기능의 `clean_app/` 추가 |
 | `bench/` | `bench/` | 고쳐서 이식 — `kisa` 키 → `category`(WS) |
 | `tests/*` | `tests/` | 표본·기대값은 재사용, 테스트 코드는 새 구조에 맞게 |
