@@ -1,3 +1,4 @@
+import asyncio
 import json
 import threading
 import time
@@ -7,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from conftest import materialize
 from wescope.models.scan_result import ScanResult
+from wescope.server.api_scans import job_events
 from wescope.server.app import COOKIE, create_app
 from wescope.server.jobs import Jobs
 
@@ -122,6 +124,26 @@ def test_delete_repo_removes_results(client, tmp_path):
     assert client.delete(f"/api/repos/{added['repo']['id']}").status_code == 204
     assert client.get("/api/repos").json() == []
     assert client.get(f"/api/scans/{added['scan_id']}").status_code == 404
+
+
+def test_sse_sends_done_when_scan_finishes_during_yield():
+    """PR #2 리뷰: 진행 이벤트를 보내고 기다리는 사이 스캔이 끝나면 done 없이 스트림이 닫히던 문제."""
+    jobs = Jobs(run=None)
+    job = jobs.submit("repo")
+    jobs._update(job, status="running", stage="analyze")
+
+    async def connected():
+        return False
+
+    async def drive():
+        stream = job_events(jobs, job, connected)
+        first = await stream.__anext__()
+        jobs._update(job, status="done", stage="save", summary={"risk_score": 0})   # 제너레이터가 yield에서 멈춘 사이
+        return first, [event async for event in stream]
+
+    first, rest = asyncio.run(drive())
+    assert first.startswith("event: progress")
+    assert len(rest) == 1 and rest[0].startswith("event: done") and '"stage": "save"' in rest[0]
 
 
 def test_queue_merges_waiting_requests_and_survives_failures():

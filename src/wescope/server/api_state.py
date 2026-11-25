@@ -9,9 +9,10 @@ router = APIRouter(prefix="/api")
 @router.get("/state")
 def state(request: Request):
     repos = history.list_repos()
-    current = request.app.state.jobs.current
+    jobs = request.app.state.jobs
+    current = jobs.current
     return {
         "repos": len(repos),
         "last_repo": history.last_scanned_repo() or (repos[-1]["id"] if repos else None),
-        "running": current.view() if current else None,
+        "running": jobs.snapshot(current)[1] if current else None,
     }

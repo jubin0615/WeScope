@@ -29,7 +29,8 @@ class Job:
 class Jobs:
     def __init__(self, run=scan_repo):
         self._run = run
-        self._lock = threading.Lock()
+        self._lock = threading.Lock()            # 큐(pending·stopping)
+        self._state = threading.Lock()           # 작업 상태 필드
         self._wake = threading.Event()
         self._pending: dict[str, Job] = {}     # repo_id → 기다리는 작업 (저장소마다 하나)
         self._jobs: dict[str, Job] = {}        # scan_id → 작업. shortcut: 서버가 떠 있는 동안 계속 쌓인다 (수백 개 수준)
@@ -64,10 +65,16 @@ class Jobs:
     def busy(self, repo_id: str) -> bool:
         return repo_id in self._pending or (self.current is not None and self.current.repo_id == repo_id)
 
+    def snapshot(self, job: Job) -> tuple[int, dict]:
+        """(version, 상태 사본). 작업 스레드가 여러 필드를 바꾸는 도중의 반쯤 바뀐 상태를 읽지 않게 잠금 안에서 읽는다."""
+        with self._state:
+            return job.version, job.view()
+
     def _update(self, job: Job, **changes):
-        for key, value in changes.items():
-            setattr(job, key, value)
-        job.version += 1
+        with self._state:
+            for key, value in changes.items():
+                setattr(job, key, value)
+            job.version += 1
 
     def _worker(self):
         while True:

@@ -47,26 +47,32 @@ def get_scan(scan_id: str, request: Request):
 @router.get("/scans/{scan_id}/events")
 async def scan_events(scan_id: str, request: Request):
     """진행 단계 이벤트(SSE). event: progress → done 또는 failed 한 번으로 끝난다."""
-    job = request.app.state.jobs.get(scan_id)
+    jobs = request.app.state.jobs
+    job = jobs.get(scan_id)
     if job is None:
         if history.repo_of_scan(scan_id) is None:     # 서버를 다시 켜기 전에 끝난 검사는 바로 done
             raise HTTPException(404, "검사를 찾을 수 없어요")
         return StreamingResponse(iter([_event("done", {"scan_id": scan_id, "status": "done"})]),
                                  media_type="text/event-stream")
+    return StreamingResponse(job_events(jobs, job, request.is_disconnected), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache"})
 
-    async def stream():
-        seen = -1
-        while True:
-            if job.version != seen:
-                seen = job.version
-                yield _event(job.status if job.status in FINISHED else "progress", job.view())
-                if job.status in FINISHED:
-                    return
-            if await request.is_disconnected():
+
+async def job_events(jobs, job, is_disconnected):
+    """작업이 바뀔 때마다 그 순간의 사본을 보낸다. 끝낼지는 '방금 보낸 사본'으로 정한다.
+    (보낸 뒤 작업을 다시 읽으면, 기다리는 사이 끝난 작업의 done을 보내지 않고 닫아 버린다)"""
+    seen = -1
+    while True:
+        version, snapshot = jobs.snapshot(job)
+        if version != seen:
+            seen = version
+            finished = snapshot["status"] in FINISHED
+            yield _event(snapshot["status"] if finished else "progress", snapshot)
+            if finished:
                 return
-            await asyncio.sleep(0.2)
-
-    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+        if await is_disconnected():
+            return
+        await asyncio.sleep(0.2)
 
 
 @router.get("/scans/{scan_id}/export")
