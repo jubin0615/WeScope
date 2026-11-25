@@ -61,6 +61,29 @@ def test_remove_repo_clears_history(tmp_path, no_semgrep):
     assert results.latest(repo["id"]) is None
 
 
+def test_similar_paths_stay_separate_repos(tmp_path, no_semgrep):
+    """PR #1 리뷰: /app/one과 /app_one이 같은 id가 되어 남의 폴더를 검사하던 문제."""
+    one, other = tmp_path / "app" / "one", tmp_path / "app_one"
+    for folder, code in ((one, "DEBUG = True\n"), (other, "x = 1\n")):
+        folder.mkdir(parents=True)
+        (folder / "settings.py").write_text(code)
+    a, b = history.add_repo(Target("folder", str(one))), history.add_repo(Target("folder", str(other)))
+    assert a["id"] != b["id"] and b["location"] == str(other.resolve())
+    assert [f.rule_id for f in scan_repo(a["id"]).findings] == ["config-debug"]
+    assert scan_repo(b["id"]).findings == []
+    assert len(history.scans(a["id"])) == 1 and len(history.scans(b["id"])) == 1
+
+
+def test_path_with_consecutive_dots_is_saved(tmp_path, no_semgrep):
+    """PR #1 리뷰: app..old 같은 폴더가 분석 후 저장 단계에서 실패하던 문제."""
+    folder = tmp_path / "app..old"
+    folder.mkdir()
+    (folder / "x.py").write_text("x = 1\n")
+    repo = history.add_repo(Target("folder", str(folder)))
+    result = scan_repo(repo["id"])
+    assert history.latest_scan_id(repo["id"]) == result.scan_id and results.latest(repo["id"]) == result
+
+
 def test_rejects_bad_inputs(tmp_path):
     with pytest.raises(ValueError):
         history.add_repo(Target("folder", str(tmp_path / "missing")))

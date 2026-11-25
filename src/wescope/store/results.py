@@ -8,12 +8,12 @@ from wescope.models.scan_result import ScanResult
 from wescope.paths import home
 from wescope.store import history
 
-_REPO_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+_REPO_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")   # Target.repo_id가 만드는 문자와 같다 (점·구분자 없음)
 _SCAN_ID = re.compile(r"[0-9a-f]{12}")
 
 
 def _dir(repo_id: str) -> Path:
-    if not _REPO_ID.fullmatch(repo_id) or ".." in repo_id:   # API에서 온 값이 경로가 되므로 여기서 막는다
+    if not _REPO_ID.fullmatch(repo_id):   # API에서 온 값이 경로가 되므로 여기서 막는다
         raise ValueError("잘못된 저장소 id")
     return home() / "results" / repo_id
 

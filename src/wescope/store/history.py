@@ -70,7 +70,10 @@ def add_repo(target: Target, name: str | None = None) -> dict:
     with _db() as db:
         db.execute("INSERT OR IGNORE INTO repos (id, kind, location, branch, name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                    (target.repo_id, target.kind, target.location, target.branch, name or default_name, _now()))
-    return get_repo(target.repo_id)
+    repo = get_repo(target.repo_id)
+    if (repo["kind"], repo["location"]) != (target.kind, target.location):   # 해시가 겹쳐도 남의 기록을 쓰지 않게
+        raise ValueError(f"다른 저장소가 같은 id로 이미 연결돼 있어요: {repo['location']}")
+    return repo
 
 
 def get_repo(repo_id: str) -> dict | None:
