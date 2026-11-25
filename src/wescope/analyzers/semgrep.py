@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sysconfig
 from pathlib import Path
 
 from wescope.analyzers.base import Analyzer, AnalyzerResult, ToolMissing
@@ -26,7 +27,7 @@ class SemgrepAnalyzer(Analyzer):
         return any(lang in ctx.profile.languages for lang in self.languages)
 
     def run(self, ctx) -> AnalyzerResult:
-        exe = shutil.which("semgrep")
+        exe = find_semgrep()
         if not exe:
             raise ToolMissing("semgrep이 설치되어 있지 않아요")
         # 사용자 저장소의 .semgrepignore나 semgrep 기본값에 결과가 흔들리지 않게 임시 스냅샷에 고정 목록을 쓴다
@@ -55,6 +56,13 @@ class SemgrepAnalyzer(Analyzer):
         if broken:
             return AnalyzerResult(hits, "partial", f"파일 {len(broken)}개를 해석하지 못함")
         return AnalyzerResult(hits)
+
+
+def find_semgrep() -> str | None:
+    """We-Scope를 실행한 Python의 스크립트 폴더를 PATH보다 먼저 본다.
+    semgrep은 wescope와 함께 설치되는데, pipx·가상환경·pip --user 설치는 그 폴더가 PATH에 없을 수 있다."""
+    own = [sysconfig.get_path("scripts"), sysconfig.get_path("scripts", sysconfig.get_preferred_scheme("user"))]
+    return shutil.which("semgrep", path=os.pathsep.join(own)) or shutil.which("semgrep")
 
 
 def _relative(ctx, path: str) -> str:

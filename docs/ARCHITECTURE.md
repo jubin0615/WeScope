@@ -393,7 +393,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 
 | 상황 | 처리 |
 |---|---|
-| Semgrep 미설치·실행 실패 | `semgrep` Analyzer `skipped`/`failed`, WS-05 "건너뜀(사유)", 나머지 진행 |
+| Semgrep 미설치·실행 실패 | `semgrep` Analyzer `skipped`/`failed`, WS-05 "건너뜀(사유)", 나머지 진행. Semgrep은 기본 의존성이라 보통 함께 설치되고, We-Scope를 실행한 Python의 스크립트 폴더 → PATH 순으로 찾는다 |
 | Python 파일 파싱 실패 | 해당 파일만 `partial`, 그 파일의 이전 발견은 fixed가 아닌 `unknown` |
 | ChatGPT 로그인 안 함 / 사용량 초과(429) / 자격 없음(403) | ChatGPT 단계 생략 또는 즉시 중단, `ai.status`에 사유, 정적 결과와 그때까지의 ChatGPT 결과는 유지 |
 | ChatGPT 응답 형식 오류 | 해당 요청만 제외, 재시도 1회 |

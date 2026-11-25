@@ -74,7 +74,7 @@ def test_same_code_same_result(tmp_path):
 
 def test_missing_semgrep_only_skips_its_area(tmp_path, monkeypatch):
     """불변식: Semgrep이 없어도 스캔은 끝나고, WS-05만 '건너뜀'이 된다."""
-    monkeypatch.setattr("wescope.analyzers.semgrep.shutil.which", lambda _: None)
+    monkeypatch.setattr("wescope.analyzers.semgrep.find_semgrep", lambda: None)
     root, _, result = scan("vuln_flask", tmp_path)
     status = {a.id: a.status for a in result.analyzers}
     assert status["semgrep"] == "skipped" and status["secrets"] == "ok"
@@ -87,3 +87,20 @@ def test_missing_semgrep_only_skips_its_area(tmp_path, monkeypatch):
 def test_result_json_round_trip(tmp_path):
     _, _, result = scan("vuln_flask", tmp_path)
     assert ScanResult.from_json(result.to_json()) == result
+
+
+def test_finds_semgrep_next_to_python_before_path(tmp_path, monkeypatch):
+    """pipx·가상환경 설치는 semgrep이 PATH에 없고 We-Scope의 Python 옆 스크립트 폴더에만 있다."""
+    import os
+    import sysconfig
+    from wescope.analyzers.semgrep import find_semgrep
+    scripts = tmp_path / "Scripts"
+    scripts.mkdir()
+    exe = scripts / ("semgrep.exe" if os.name == "nt" else "semgrep")
+    exe.write_text("")
+    exe.chmod(0o755)
+    monkeypatch.setattr(sysconfig, "get_path", lambda name, scheme=None: str(scripts))
+    monkeypatch.setenv("PATH", "")
+    assert os.path.samefile(find_semgrep(), exe)
+    monkeypatch.setattr(sysconfig, "get_path", lambda name, scheme=None: str(tmp_path / "none"))
+    assert find_semgrep() is None

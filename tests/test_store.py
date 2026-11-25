@@ -15,7 +15,7 @@ from wescope.store.lock import scan_lock
 @pytest.fixture
 def no_semgrep(monkeypatch):
     """저장 동작만 보는 테스트는 Semgrep 없이 빠르게 돈다."""
-    monkeypatch.setattr("wescope.analyzers.semgrep.shutil.which", lambda _: None)
+    monkeypatch.setattr("wescope.analyzers.semgrep.find_semgrep", lambda: None)
 
 
 def test_scan_repo_saves_and_compares(tmp_path, no_semgrep):
