@@ -15,3 +15,74 @@ test("시작 화면: 폴더 경로와 GitHub 주소 중 하나만", async () => 
   assert.match(target("C:\app", "https://github.com/o/r", "").error, /하나만/);
   assert.deepEqual(target(" ", "", ""), { error: null });
 });
+
+const fixture = (name) => require(path.join(__dirname, "../fixtures/results", name));
+
+test("목록: 같은 rule_id 묶기와 엔진 순서", async () => {
+  const { groups } = await load("components/list.js");
+  const result = fixture("first-scan.json");
+  const list = groups(result.findings, "all");
+  assert.equal(list.length, new Set(result.findings.map((f) => f.rule_id)).size);
+  assert.equal(list[0].rule_id, result.findings[0].rule_id);
+  assert.equal(list.find((g) => g.rule_id === "secret-hardcoded").findings.length, 2);
+  const order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
+  const sevs = list.map((g) => order.indexOf(g.severity));
+  assert.deepEqual(sevs, [...sevs].sort((a, b) => a - b));               // 심각도 순서 유지
+});
+
+test("목록: 묶음 심각도는 가장 높은 것, 심각도 거르기는 발견 단위", async () => {
+  const { groups } = await load("components/list.js");
+  const { findings } = fixture("secrets-git.json");
+  const env = groups(findings, "all").find((g) => g.rule_id === "secret-env-file");
+  assert.equal(env.severity, "CRITICAL");
+  assert.equal(env.findings.length, 2);
+  const high = groups(findings, "all", "HIGH").find((g) => g.rule_id === "secret-env-file");
+  assert.deepEqual(high.findings.map((f) => f.location.file), [".env.local"]);
+});
+
+test("탭: FIXED·오탐은 전체에서 빠지고 각 탭에만", async () => {
+  const { groups, tabCounts } = await load("components/list.js");
+  const result = fixture("rescan-new-fixed-dismissed.json");
+  const ids = (tab) => groups(result.findings, tab).flatMap((g) => g.findings.map((f) => f.id));
+  assert.deepEqual(ids("fixed"), ["F-024"]);
+  assert.deepEqual(ids("dismissed").sort(), ["F-006", "F-023"]);
+  assert.deepEqual(ids("new"), ["F-016"]);
+  for (const id of ["F-024", "F-006", "F-023"]) assert.ok(!ids("all").includes(id), id);
+  assert.equal(tabCounts(result.findings).ai, 0);
+});
+
+test("요약 숫자와 전체 탭이 같은 발견을 센다 (샘플 5개)", async () => {
+  const { groups } = await load("components/list.js");
+  for (const name of ["clean.json", "first-scan.json", "rescan-new-fixed-dismissed.json", "secrets-git.json", "semgrep-skipped.json"]) {
+    const result = fixture(name);
+    for (const [sev, count] of Object.entries(result.summary.severity)) {
+      const shown = groups(result.findings, "all", sev).reduce((n, g) => n + g.findings.length, 0);
+      assert.equal(shown, count, `${name} ${sev}`);
+    }
+  }
+});
+
+test("선택 유지: 같은 rule_id가 있으면 그대로, 없으면 첫 묶음", async () => {
+  const { groups, keepSelection } = await load("components/list.js");
+  const list = groups(fixture("first-scan.json").findings, "all");
+  assert.equal(keepSelection(list, "inject-sql"), "inject-sql");
+  assert.equal(keepSelection(list, "gone"), list[0].rule_id);
+  assert.equal(keepSelection([], "inject-sql"), null);
+});
+
+test("위치 표기: 라우트 > 파일:줄 > 파일", async () => {
+  const { where } = await load("components/list.js");
+  assert.equal(where({ location: { file: "app.py", line: 41, route: "GET /orders/<id>" } }), "GET /orders/<id>");
+  assert.equal(where({ location: { file: "app.py", line: 36, route: null } }), "app.py:36");
+  assert.equal(where({ location: { file: ".env", line: 0, route: null } }), ".env");
+});
+
+test("상태 문장 시각: 방금 · n분 전 · n시간 전 · 날짜", async () => {
+  const { relTime } = await load("components/topbar.js");
+  const now = new Date(2026, 10, 25, 15, 0).getTime();
+  const ago = (ms) => new Date(now - ms).toISOString();
+  assert.equal(relTime(ago(30e3), now), "방금");
+  assert.equal(relTime(ago(3 * 60e3), now), "3분 전");
+  assert.equal(relTime(ago(5 * 3600e3), now), "5시간 전");
+  assert.equal(relTime(new Date(2026, 10, 20, 9, 5).toISOString(), now), "11월 20일 09:05");
+});

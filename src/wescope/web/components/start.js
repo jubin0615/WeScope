@@ -1,4 +1,5 @@
 // 시작 화면: 폴더 경로 / GitHub 주소 중 하나를 받아 POST /api/repos (DASHBOARD.md §3-1).
+import { h } from "../dom.js";
 
 // 입력 칸 값 → 요청 본문. 둘 중 하나만 채워야 한다. 형식 검사(폴더 존재·GitHub 주소)는 서버가 한다.
 export function target(path, github, branch) {
@@ -7,12 +8,6 @@ export function target(path, github, branch) {
   if (path) return { body: { path } };
   if (github) return { body: branch ? { github, branch } : { github } };
   return { error: null };   // 아무것도 안 채움: 버튼만 꺼 두고 문장은 띄우지 않는다
-}
-
-function h(tag, props = {}, ...children) {
-  const el = Object.assign(document.createElement(tag), props);
-  el.append(...children);
-  return el;
 }
 
 function field(label, placeholder) {
