@@ -6,6 +6,7 @@ hook 줄:  '<python>' -m wescope.hook --repo <id> --commit "$(git rev-parse HEAD
 """
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -86,6 +87,10 @@ def uninstall(repo: dict):
 
 
 def run(repo_id: str, commit: str):
+    # hook은 커밋한 worktree의 GIT_DIR·GIT_INDEX_FILE 등을 물려받는다. 그대로 두면 연결한 폴더를 검사하면서
+    # 다른 worktree의 HEAD·index를 읽는다. githooks 문서대로 비운다.
+    for name in git("rev-parse", "--local-env-vars").split():
+        os.environ.pop(name, None)
     if history.get_repo(repo_id) is None:
         return                                   # 연결을 해제한 저장소에 남은 hook
     server = state.read()

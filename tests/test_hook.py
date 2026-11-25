@@ -155,3 +155,21 @@ def test_stale_python_path_shows_off_and_reinstall_replaces_it(repo):
     assert hook.installed(repo) is False             # 옛 경로 줄은 조용히 실패하므로 꺼짐으로 보인다
     hook.install(repo)
     assert path.read_text(encoding="utf-8") == current and hook.installed(repo)
+
+
+def test_worktree_commit_does_not_leak_git_env_into_scan(repo, tmp_path, monkeypatch):
+    """같은 저장소의 다른 worktree에서 커밋하면 hook은 그 worktree의 GIT_DIR·GIT_INDEX_FILE을 물려받는다.
+    그대로 두면 연결한 폴더를 검사하면서 다른 worktree의 HEAD·index를 읽는다 (PR #7 Codex 리뷰)."""
+    monkeypatch.setattr(hook, "DEBOUNCE", 0)
+    root = Path(repo["location"])
+    other = tmp_path / "wt"
+    git(root, "worktree", "add", "-q", str(other), "-b", "feature")
+    commit(other, "in worktree")
+    worktree_git = subprocess.run(["git", "rev-parse", "--absolute-git-dir"], cwd=other, capture_output=True,
+                                  text=True).stdout.strip()
+    monkeypatch.setenv("GIT_DIR", worktree_git)                  # git이 hook에 넘기는 값과 같게
+    monkeypatch.setenv("GIT_INDEX_FILE", str(Path(worktree_git) / "index"))
+    hook.run(repo["id"], "x")
+    main_head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True,
+                               env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")}).stdout.strip()
+    assert hook_scans(repo["id"])[0]["commit_sha"] == main_head
