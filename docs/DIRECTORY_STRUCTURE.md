@@ -165,11 +165,12 @@ WeScope/
 │       └── web/                  # 빌드 없는 정적 프론트엔드 (패키지 데이터) — DASHBOARD.md 기준
 │           ├── index.html
 │           ├── app.js            # 상태 관리, API·SSE, 화면 조립
+│           ├── dom.js            # h() 화면 조각 도우미, 심각도 목록
 │           ├── components/
 │           │   ├── start.js      #   시작 화면: 입력 2개(폴더 경로 / GitHub 주소), 프로젝트 추가 창
 │           │   ├── topbar.js     #   로고 · 프로젝트 선택 · 상태 문장·진행 표시 · ChatGPT 상태 · ⚙ · [다시 스캔]
 │           │   ├── summary.js    #   요약 줄 (심각도 색 라벨 개수 · NEW/FIXED · 위험 점수 · 보고서 ↓)
-│           │   ├── tabs.js       #   보기 탭 (전체·심각도·NEW·FIXED·AI·오탐 표시·검사 범위)
+│           │   ├── tabs.js       #   보기 탭 (전체·NEW·FIXED·AI·오탐 표시·검사 범위)
 │           │   ├── list.js       #   왼쪽 위험 목록: 묶기·정렬·선택 유지
 │           │   ├── detail.js     #   오른쪽 상세: 수정안·설명·위치·판정 정보 탭, 하단 버튼
 │           │   ├── diffview.js   #   diff 뷰어 (추가·삭제 줄, 마스킹)
