@@ -36,6 +36,7 @@ class ScanContext:
     sensitive_files: list[dict]
     git_status: dict[str, str] | None
     skipped: dict[str, str]
+    excluded: list[str] = field(default_factory=list)   # 제외 패턴에 걸린 파일·'폴더/'
     secrets: SecretRegistry = field(default_factory=SecretRegistry)
     profile: AppProfile = field(default_factory=AppProfile)
     partial_files: set[str] = field(default_factory=set)
@@ -77,7 +78,7 @@ def collect(target: snap.Target):
         root = work / "root"
         root.mkdir()
         s = snap.take(target, root)
-        ctx = ScanContext(root, s.source, s.files, s.all_files, s.sensitive_files, s.git_status, s.skipped)
+        ctx = ScanContext(root, s.source, s.files, s.all_files, s.sensitive_files, s.git_status, s.skipped, s.excluded)
         ctx.profile = build(ctx)
         yield ctx
     finally:

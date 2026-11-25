@@ -488,7 +488,8 @@ def correlate(findings):
 ### 직전 스캔과 비교
 
 ```python
-def compare(current, previous, partial_files, commit):
+# excluded: 이번에 제외 패턴으로 뺀 파일·폴더. 그 안의 이전 발견은 '고침'이 아니라 '검사 범위에서 뺌'이라 결과에서 뺀다.
+def compare(current, previous, partial_files, commit, excluded=()):
     # 이미 fixed였던 것은 비교에서 뺀다 (안 그러면 FIXED가 검사마다 쌓인다). 오탐 표시는 aggregate 한 곳에서만.
     before = {f.fingerprint: f for f in (previous.findings if previous else []) if f.change != "fixed"}
     now = {f.fingerprint for f in current}

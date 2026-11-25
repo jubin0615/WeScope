@@ -341,8 +341,9 @@ collector  analyzers  engine  llm   report / store
 | `rules/semgrep/config-cors.yml` | `rules/semgrep/config-js.yml` | JS 쪽 CORS·쿠키·약한 서명 키를 함께 담는다 |
 | `tests/fixtures/expected/` | 표본 파일 안의 `# expect: 규칙` 주석 | 기대값이 코드 바로 위에 있어 어긋날 수 없다. 파일 단위 발견만 테스트에 적는다 |
 | `tests/test_rules_semgrep.py`의 표본 | `tests/semgrep_samples/` + `# ruleid:` / `# ok:` 주석 | Semgrep 표준 주석 형식 |
-| `tests/fixtures/results/` | (B6에서 생성) | 서버 단계에서 실제 스캔으로 만든다 |
-| `store/results.py`, `history.py` | + `store/lock.py` (`~/.wescope/scan.lock`) | 서버 작업 큐와 서버 없이 도는 hook이 같은 이력에 동시에 쓰지 않게 |
+| `tests/fixtures/results/` | 실제 스캔으로 만든 샘플 5개 (첫 검사·다시 검사(NEW/FIXED/오탐)·Git 비밀값·발견 없음·Semgrep 건너뜀) | `tests/test_contract.py`가 형식을 고정한다. 경로는 `/home/me/projects/…`로 바꿔 둔다 |
+| `server/api_ignores.py`, `api_settings.py` | (B7·B8) | 오탐 표시·전역 설정은 쓰는 기능이 생길 때 추가 |
+| `store/results.py`, `history.py` | + `store/lock.py` (`~/.wescope/scan.lock`, `launch.lock`) | 서버 작업 큐와 서버 없이 도는 hook이 같은 이력에 동시에 쓰지 않게, 동시에 실행한 `wescope`가 서버를 하나만 띄우게 |
 | `scan.py`의 `run_scan()` | + `scan_repo(repo_id)` | `run_scan`은 저장 없이 검사만(테스트·수정안 검증), `scan_repo`는 직전 결과·오탐·꺼 둔 규칙을 store에서 읽고 결과를 저장 (작업 큐·hook이 호출) |
 | `report/markdown.py` | 발견을 규칙별로 묶는다 | 같은 설명이 반복되지 않게 (대시보드 목록과 같은 묶음) |
 

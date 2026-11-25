@@ -24,6 +24,7 @@ class Target:
     kind: str                 # folder / github
     location: str             # 폴더 경로 또는 저장소 URL
     branch: str | None = None
+    excludes: tuple[str, ...] = ()   # 대시보드 설정의 제외 패턴 (.wescopeignore와 같은 문법)
 
     @property
     def repo_id(self) -> str:
@@ -42,6 +43,7 @@ class Snapshot:
     sensitive_files: list[dict]         # Track D: {path, kind, git}
     git_status: dict[str, str] | None   # committed / untracked / ignored, Git이 아니면 None
     skipped: dict[str, str]
+    excluded: list[str]                 # 제외 패턴에 걸린 파일, 폴더는 '경로/' (비교 단계가 '해결'로 오인하지 않게)
 
 
 def git(*args: str, cwd: Path | None = None) -> str:
@@ -60,7 +62,7 @@ def take(target: Target, dest: Path) -> Snapshot:
     if status is not None:
         source["commit"] = _try_git("rev-parse", "HEAD", cwd=src)
         source["branch"] = _try_git("rev-parse", "--abbrev-ref", "HEAD", cwd=src)
-    return _copy(src, dest, source, status)
+    return _copy(src, dest, source, status, target.excludes)
 
 
 def _github(target: Target, dest: Path) -> Snapshot:
@@ -78,18 +80,19 @@ def _github(target: Target, dest: Path) -> Snapshot:
         with tarfile.open(archive) as tar:
             tar.extractall(staging, filter="data")
         source = {"kind": "github", "location": target.location, "git": True, "commit": commit, "branch": branch}
-        return _copy(staging, dest, source, None, all_committed=True)
+        return _copy(staging, dest, source, None, target.excludes, all_committed=True)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
         archive.unlink(missing_ok=True)
 
 
-def _copy(src: Path, dest: Path, source: dict, status, all_committed=False) -> Snapshot:
+def _copy(src: Path, dest: Path, source: dict, status, excludes=(), all_committed=False) -> Snapshot:
     ignore_file = src / ".wescopeignore"
-    extra_ignore = pathspec.PathSpec.from_lines("gitwildmatch", ignore_file.read_text("utf-8").splitlines()) \
-        if ignore_file.is_file() else None
-    files, all_files, sensitive_files, skipped, git_status = [], [], [], {}, {}
-    for path in _walk(src, src, extra_ignore, skipped):
+    # 뒤에 오는 패턴이 이긴다: 대시보드 설정을 뒤에 둬서 .wescopeignore의 !되살리기 줄이 설정을 무르지 못하게 한다
+    lines = [*(ignore_file.read_text("utf-8").splitlines() if ignore_file.is_file() else []), *excludes]
+    extra_ignore = pathspec.PathSpec.from_lines("gitwildmatch", lines) if lines else None
+    files, all_files, sensitive_files, skipped, git_status, excluded = [], [], [], {}, {}, []
+    for path in _walk(src, src, extra_ignore, skipped, excluded):
         rel = path.relative_to(src).as_posix()
         all_files.append(rel)
         state = "committed" if all_committed else (status(rel) if status else None)
@@ -108,21 +111,27 @@ def _copy(src: Path, dest: Path, source: dict, status, all_committed=False) -> S
         files.append(rel)
     has_git = all_committed or status is not None
     return Snapshot(source, sorted(files), sorted(all_files), sorted(sensitive_files, key=lambda s: s["path"]),
-                    git_status if has_git else None, skipped)
+                    git_status if has_git else None, skipped, excluded)
 
 
-def _walk(root: Path, current: Path, extra_ignore, skipped):
+def _walk(root: Path, current: Path, extra_ignore, skipped, excluded):
     for entry in sorted(current.iterdir()):
         rel = entry.relative_to(root).as_posix()
         if entry.is_symlink():
             skipped[rel] = "심볼릭 링크"
             continue
         if entry.is_dir():
-            if entry.name not in EXCLUDED_DIRS and not (extra_ignore and extra_ignore.match_file(rel + "/")):
-                yield from _walk(root, entry, extra_ignore, skipped)
-        elif entry.is_file() and not entry.name.endswith(".min.js") \
-                and not (extra_ignore and extra_ignore.match_file(rel)):
-            yield entry
+            if entry.name in EXCLUDED_DIRS:
+                continue
+            if extra_ignore and extra_ignore.match_file(rel + "/"):
+                excluded.append(rel + "/")
+            else:
+                yield from _walk(root, entry, extra_ignore, skipped, excluded)
+        elif entry.is_file() and not entry.name.endswith(".min.js"):
+            if extra_ignore and extra_ignore.match_file(rel):
+                excluded.append(rel)
+            else:
+                yield entry
 
 
 def _try_git(*args, cwd) -> str | None:
