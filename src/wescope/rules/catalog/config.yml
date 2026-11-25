@@ -1,0 +1,230 @@
+# WS-06 위험한 기본값 — analyzers/config.py · insecure_defaults.py · rules/semgrep/config-js.yml (RULES.md §2)
+- id: config-debug
+  category: WS-06
+  cwe: CWE-489
+  severity: MEDIUM
+  confidence: Likely
+  title_ko: "디버그 모드가 켜져 있어요"
+  tech_name_ko: "디버그 모드 활성화"
+  why_ko: "오류가 나면 코드·설정·환경변수가 화면에 그대로 보이고, Flask 디버거는 브라우저에서 서버 코드를 실행할 수도 있어요."
+  fix_ko: "debug 값을 환경변수로 받고 운영 환경에서는 꺼 두세요."
+  avoid_ko: "배포 직전에 손으로 끄는 방식에 기대지 마세요. 기본값을 꺼짐으로 두세요."
+  fix_example: |
+    # 수정 전
+    app.run(debug=True)
+    # 수정 후
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
+  limitations_ko: "이 설정이 실제 운영 환경에서 쓰이는지는 확인하지 않았어요."
+
+- id: config-allowed-hosts
+  category: WS-06
+  cwe: null
+  severity: MEDIUM
+  confidence: Likely
+  title_ko: "어떤 도메인으로 접속해도 받아 주도록 설정돼 있어요"
+  tech_name_ko: "ALLOWED_HOSTS 전체 허용"
+  why_ko: "Host 헤더를 조작한 요청으로 비밀번호 재설정 링크가 공격자 도메인으로 만들어지는 등 공격에 쓰일 수 있어요."
+  fix_ko: "실제 서비스 도메인만 ALLOWED_HOSTS에 넣으세요."
+  avoid_ko: "오류를 없애려고 \"*\"를 넣지 마세요."
+  fix_example: |
+    # 수정 전
+    ALLOWED_HOSTS = ["*"]
+    # 수정 후
+    ALLOWED_HOSTS = ["example.com", "www.example.com"]
+  limitations_ko: "운영 설정 파일이 따로 있는지는 확인하지 않았어요."
+
+- id: config-cors-wildcard
+  category: WS-06
+  cwe: CWE-942
+  severity: MEDIUM
+  confidence: Likely
+  title_ko: "모든 사이트에서 이 API를 부를 수 있게 열려 있어요"
+  tech_name_ko: "CORS 전체 허용"
+  why_ko: "다른 사이트의 스크립트도 이 API 응답을 읽을 수 있어요. 인증이 필요 없는 공개 API가 아니라면 정보가 새어 나갈 수 있어요."
+  fix_ko: "실제로 API를 부르는 프론트엔드 도메인만 허용 목록에 넣으세요."
+  avoid_ko: "요청의 Origin을 그대로 돌려주는 방식으로 바꾸지 마세요. 전체 허용과 같아요."
+  fix_example: |
+    # 수정 전
+    CORS(app)
+    # 수정 후
+    CORS(app, origins=["https://my-app.com"])
+  limitations_ko: "공개 API로 일부러 연 것인지는 판단하지 않았어요."
+
+- id: config-cors-credentials
+  category: WS-06
+  cwe: CWE-942
+  severity: HIGH
+  confidence: Likely
+  title_ko: "다른 사이트가 로그인한 사용자 권한으로 API를 부를 수 있어요"
+  tech_name_ko: "CORS 전체 허용 + 자격 증명 허용"
+  why_ko: "사용자가 악성 사이트를 열기만 해도 그 사이트가 사용자 쿠키로 이 API를 호출하고 응답을 읽을 수 있어요."
+  fix_ko: "credentials를 허용한다면 허용 도메인을 정확히 지정하세요."
+  avoid_ko: "요청 Origin을 그대로 반사하면서 credentials를 켜지 마세요."
+  fix_example: |
+    // 수정 전
+    app.use(cors({ origin: true, credentials: true }))
+    // 수정 후
+    app.use(cors({ origin: ["https://my-app.com"], credentials: true }))
+  limitations_ko: "실제 응답 헤더는 확인하지 않고 설정 코드로 판단했어요."
+
+- id: config-cookie-flags
+  category: WS-06
+  cwe: CWE-614
+  severity: MEDIUM
+  confidence: Likely
+  title_ko: "로그인 쿠키에 보호 설정이 빠져 있어요"
+  tech_name_ko: "쿠키 보안 속성 누락 (Secure·HttpOnly·SameSite)"
+  why_ko: "HttpOnly가 없으면 XSS로 쿠키를 훔칠 수 있고, Secure가 없으면 암호화되지 않은 연결로 전송되며, SameSite가 없으면 다른 사이트에서 요청을 위조할 수 있어요."
+  fix_ko: "세션·인증 쿠키에 Secure, HttpOnly, SameSite=Lax(또는 Strict)를 켜세요."
+  avoid_ko: "로컬 개발이 불편하다고 운영 설정까지 끄지 마세요."
+  fix_example: |
+    # 수정 전
+    resp.set_cookie("session", token)
+    # 수정 후
+    resp.set_cookie("session", token, secure=True, httponly=True, samesite="Lax")
+  limitations_ko: "프레임워크 기본값이 다른 곳에서 바뀌었는지는 확인하지 않았어요."
+
+- id: config-weak-secret
+  category: WS-06
+  cwe: CWE-321
+  severity: HIGH
+  confidence: Likely
+  title_ko: "로그인 정보를 서명하는 키가 너무 쉬워요"
+  tech_name_ko: "약한 서명 키 (SECRET_KEY·JWT_SECRET)"
+  why_ko: "서명 키를 알거나 추측하면 누구나 관리자 세션이나 JWT를 직접 만들어 로그인할 수 있어요."
+  fix_ko: "32자 이상 무작위 값을 만들어 환경변수로 넣으세요 (예: python -c \"import secrets; print(secrets.token_urlsafe(48))\")."
+  avoid_ko: "코드에 긴 문자열을 직접 적는 것으로 끝내지 마세요. 키는 코드 밖에 두세요."
+  fix_example: |
+    # 수정 전
+    app.config["SECRET_KEY"] = "secret"
+    # 수정 후
+    app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+  limitations_ko: "운영 환경에서 다른 값으로 덮어쓰는지는 확인하지 않았어요."
+
+- id: config-weak-hash
+  category: WS-06
+  cwe: CWE-328
+  severity: MEDIUM
+  confidence: Potential
+  title_ko: "비밀번호를 쉽게 풀리는 방식으로 저장하는 것 같아요"
+  tech_name_ko: "약한 해시로 비밀번호 저장 (MD5·SHA-1)"
+  why_ko: "DB가 유출되면 MD5·SHA-1 해시는 아주 빠르게 원래 비밀번호로 되돌릴 수 있어요."
+  fix_ko: "bcrypt·argon2·scrypt 같은 비밀번호 전용 해시를 쓰세요 (werkzeug.security.generate_password_hash, bcrypt 패키지)."
+  avoid_ko: "MD5를 여러 번 반복하거나 고정 salt를 붙이는 방식으로 고치지 마세요."
+  fix_example: |
+    # 수정 전
+    hashed = hashlib.md5(password.encode()).hexdigest()
+    # 수정 후
+    from werkzeug.security import generate_password_hash
+    hashed = generate_password_hash(password)
+  limitations_ko: "주변 이름으로 비밀번호 용도인지 추정했어요. 파일 체크섬 같은 다른 용도일 수 있어요."
+
+- id: config-tls-verify-off
+  category: WS-06
+  cwe: CWE-295
+  severity: MEDIUM
+  confidence: Likely
+  title_ko: "외부 서버의 인증서를 확인하지 않고 통신해요"
+  tech_name_ko: "TLS 인증서 검증 해제"
+  why_ko: "중간에서 통신을 가로채는 공격자가 가짜 서버 행세를 해도 알아챌 수 없어서, 주고받는 데이터와 키가 노출될 수 있어요."
+  fix_ko: "검증 해제 옵션을 지우세요. 사설 인증서라면 그 CA 인증서 경로를 지정하세요."
+  avoid_ko: "인증서 오류를 없애려고 검증을 끄지 마세요."
+  fix_example: |
+    # 수정 전
+    requests.get(url, verify=False)
+    # 수정 후
+    requests.get(url)  # 또는 verify="/path/to/ca.pem"
+  limitations_ko: "테스트 코드에서만 쓰이는지는 확인하지 않았어요."
+
+- id: config-default-credential
+  category: WS-06
+  cwe: CWE-1392
+  severity: HIGH
+  confidence: Likely
+  title_ko: "누구나 아는 기본 계정(admin/admin)이 들어 있어요"
+  tech_name_ko: "기본 계정·비밀번호"
+  why_ko: "공격자가 가장 먼저 시도하는 조합이에요. 그대로 배포되면 관리자로 바로 로그인할 수 있어요."
+  fix_ko: "기본 계정을 지우고, 첫 관리자는 설치할 때 강한 비밀번호로 만들게 하세요."
+  avoid_ko: "비밀번호만 admin123 같은 다른 쉬운 값으로 바꾸지 마세요."
+  fix_example: |
+    # 수정 전
+    if username == "admin" and password == "admin":
+    # 수정 후
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password_hash, password):
+  limitations_ko: "같은 줄의 문자열 조합으로 판단했어요."
+
+- id: config-error-exposure
+  category: WS-06
+  cwe: CWE-209
+  severity: MEDIUM
+  confidence: Likely
+  title_ko: "오류 내용을 사용자에게 그대로 보여 줘요"
+  tech_name_ko: "오류·스택트레이스 노출"
+  why_ko: "오류 메시지에 파일 경로, SQL 문장, 라이브러리 버전이 담겨 공격자가 다음 공격을 준비하는 데 쓰여요."
+  fix_ko: "사용자에게는 일반 메시지만 돌려주고, 자세한 오류는 서버 로그에만 남기세요."
+  avoid_ko: "운영에서만 끄겠다는 조건문으로 남겨 두지 마세요."
+  fix_example: |
+    # 수정 전
+    except Exception as e:
+        return {"error": str(e)}, 500
+    # 수정 후
+    except Exception:
+        app.logger.exception("주문 처리 실패")
+        return {"error": "요청을 처리하지 못했어요."}, 500
+  limitations_ko: "응답으로 돌려주는 코드 줄만 보고 판단했어요."
+
+- id: config-fail-open
+  category: WS-06
+  cwe: CWE-636
+  severity: HIGH
+  confidence: Likely
+  title_ko: "인증 확인에서 오류가 나면 통과시켜 버려요"
+  tech_name_ko: "실패 시 허용 (fail-open)"
+  why_ko: "공격자가 일부러 잘못된 토큰을 보내 오류를 일으키면 인증을 건너뛸 수 있어요."
+  fix_ko: "예외가 나면 거부(False·401·403)하도록 바꾸세요."
+  avoid_ko: "모든 예외를 잡아서 다음 단계로 넘기지 마세요."
+  fix_example: |
+    # 수정 전
+    try:
+        return verify(token)
+    except Exception:
+        return True
+    # 수정 후
+    except Exception:
+        return False
+  limitations_ko: "함수 이름으로 인증·권한 함수인지 추정했어요."
+
+- id: config-swallowed-exception
+  category: WS-06
+  cwe: CWE-390
+  severity: LOW
+  confidence: Potential
+  title_ko: "보안 확인 함수가 오류를 조용히 무시해요"
+  tech_name_ko: "예외 무시"
+  why_ko: "검증 중 오류가 나도 아무 기록이 없어 문제를 알아채기 어렵고, 이후 코드가 검증된 것처럼 동작할 수 있어요."
+  fix_ko: "예외를 로그로 남기고 요청을 거부하세요."
+  avoid_ko: "except: pass로 오류를 감추지 마세요."
+  fix_example: |
+    # 수정 전
+    except Exception:
+        pass
+    # 수정 후
+    except Exception:
+        logger.exception("토큰 검증 실패")
+        raise PermissionError
+  limitations_ko: "함수 이름으로 보안 함수인지 추정했어요."
+
+- id: config-security-todo
+  category: WS-06
+  cwe: null
+  severity: INFO
+  confidence: Potential
+  title_ko: "보안 관련 할 일(TODO)이 남아 있어요"
+  tech_name_ko: "보안 관련 TODO"
+  why_ko: "나중에 하겠다고 남긴 인증·검증 작업이 빠진 채로 배포될 수 있어요."
+  fix_ko: "배포 전에 TODO가 가리키는 작업을 끝내거나 이슈로 옮기세요."
+  avoid_ko: "TODO 주석만 지우고 넘어가지 마세요."
+  fix_example: |
+    # TODO: 관리자 권한 확인 추가  ← 실제로 확인 코드를 넣으세요
+  limitations_ko: "주석 문장만 보고 판단했어요. 점수에는 반영하지 않아요."

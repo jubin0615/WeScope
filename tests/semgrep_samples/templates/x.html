@@ -1,0 +1,4 @@
+{# ruleid: inject-xss-template #}
+<p>{{ comment|safe }}</p>
+{# ok: inject-xss-template #}
+<p>{{ name }}</p>

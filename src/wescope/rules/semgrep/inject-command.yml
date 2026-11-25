@@ -1,0 +1,72 @@
+# inject-command — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-command
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-78
+    severity: HIGH
+    confidence: Likely
+    title_ko: 보낸 값으로 서버에서 아무 명령이나 실행할 수 있어요
+    tech_name_ko: 명령어 인젝션 (shell 실행)
+    why_ko: 입력에 ; rm -rf / 같은 명령을 덧붙이면 서버에서 그대로 실행돼요. 서버 전체를 장악당할 수 있어요.
+    fix_ko: shell=True를 빼고 명령과 인자를 리스트로 넘기세요. 가능하면 셸 명령 대신 파이썬 라이브러리를 쓰세요.
+    avoid_ko: 입력에서 ; | & 같은 문자만 지우는 방식으로 막지 마세요.
+    fix_example: |
+      # 수정 전
+      subprocess.run(f"ping -c 1 {host}", shell=True)
+      # 수정 후
+      subprocess.run(["ping", "-c", "1", host])
+    limitations_ko: 같은 함수 안의 흐름만 확인했어요.
+  mode: taint
+  pattern-sources:
+  - pattern: flask.request.$ATTR
+  - patterns:
+    - pattern-inside: |
+        @$APP.$ROUTE(...)
+        def $F(..., $P, ...):
+          ...
+    - metavariable-regex:
+        metavariable: $ROUTE
+        regex: ^(route|get|post|put|patch|delete|api_route)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: shlex.quote(...)
+  pattern-sinks:
+  - patterns:
+    - pattern: subprocess.$F($CMD, ..., shell=True, ...)
+    - focus-metavariable: $CMD
+  - patterns:
+    - pattern-either:
+      - pattern: os.system($CMD)
+      - pattern: os.popen($CMD, ...)
+    - focus-metavariable: $CMD
+- id: inject-command--js
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: exec($CMD, ...)
+      - pattern: execSync($CMD, ...)
+      - pattern: $CP.exec($CMD, ...)
+      - pattern: $CP.execSync($CMD, ...)
+    - focus-metavariable: $CMD

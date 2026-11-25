@@ -1,0 +1,69 @@
+rules:
+  - id: inject-sql
+    languages: [python]
+    severity: ERROR
+    message: 외부 입력이 SQL 문자열에 결합됩니다
+    metadata:
+      category: WS-05
+      cwe: CWE-89
+      severity: HIGH
+      confidence: Likely
+      title_ko: "입력값으로 DB 내용을 마음대로 꺼내거나 지울 수 있어요"
+      tech_name_ko: "SQL 인젝션 (문자열 결합 쿼리)"
+      why_ko: "사용자가 보낸 값이 SQL 문장 일부가 되어, 다른 사람의 데이터까지 조회·수정·삭제될 수 있어요."
+      fix_ko: "값을 문자열에 붙이지 말고 파라미터 바인딩(? 또는 %s 자리표시자)으로 넘기세요."
+      avoid_ko: "입력값에서 따옴표만 지우는 방식으로 막지 마세요."
+      fix_example: |
+        # 수정 전
+        cur.execute(f"SELECT * FROM users WHERE name = '{name}'")
+        # 수정 후
+        cur.execute("SELECT * FROM users WHERE name = %s", (name,))
+      limitations_ko: "같은 함수 안의 흐름만 확인했습니다. 호출하는 쪽에서 값을 검증하는지는 확인하지 않았습니다."
+    mode: taint
+    pattern-sources:
+      - pattern: flask.request.$ATTR
+      - patterns:
+          - pattern-inside: |
+              @$APP.$ROUTE(...)
+              def $F(..., $P, ...):
+                ...
+          - metavariable-regex: {metavariable: $ROUTE, regex: ^(route|get|post|put|patch|delete|api_route)$}
+          - pattern: $P
+    pattern-sanitizers:
+      - pattern: int(...)
+      - pattern: float(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $C.execute($Q, ...)
+              - pattern: $C.executemany($Q, ...)
+              - pattern: $C.executescript($Q, ...)
+              - pattern: $C.raw($Q, ...)
+              - pattern: sqlalchemy.text($Q)
+          - focus-metavariable: $Q
+  - id: inject-sql--js
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: 외부 입력이 SQL 문자열에 결합됩니다
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: $REQ.body
+              - pattern: $REQ.query
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+          - metavariable-regex: {metavariable: $REQ, regex: ^(req|request)$}
+    pattern-sanitizers:
+      - pattern: parseInt(...)
+      - pattern: Number(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.query($Q, ...)
+              - pattern: $DB.execute($Q, ...)
+              - pattern: $DB.raw($Q, ...)
+              - pattern: $DB.$queryRawUnsafe($Q, ...)
+              - pattern: $DB.$executeRawUnsafe($Q, ...)
+          - focus-metavariable: $Q

@@ -1,0 +1,95 @@
+# inject-ssrf — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-ssrf
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-918
+    severity: HIGH
+    confidence: Likely
+    title_ko: 보낸 주소로 서버가 대신 요청을 보내요 (내부망 접근 가능)
+    tech_name_ko: SSRF (서버 측 요청 위조)
+    why_ko: 공격자가 내부 관리 페이지나 클라우드 메타데이터 주소(169.254.169.254)를 넣어 서버만 접근할 수 있는 정보를 가져갈 수 있어요.
+    fix_ko: 요청할 수 있는 호스트를 허용 목록으로 고정하고, 사용자에게는 주소 대신 미리 정한 키만 받으세요.
+    avoid_ko: http:// 로 시작하는지만 검사하는 방식으로 막지 마세요.
+    fix_example: |
+      # 수정 전
+      requests.get(request.args["url"])
+      # 수정 후
+      ALLOWED = {"weather": "https://api.weather.example"}
+      requests.get(ALLOWED[request.args["source"]])
+    limitations_ko: 같은 함수 안의 흐름만 확인했어요. 고정된 호스트 뒤에 경로만 붙이는 경우도 표시될 수 있어요.
+  mode: taint
+  pattern-sources:
+  - pattern: flask.request.$ATTR
+  - patterns:
+    - pattern-inside: |
+        @$APP.$ROUTE(...)
+        def $F(..., $P, ...):
+          ...
+    - metavariable-regex:
+        metavariable: $ROUTE
+        regex: ^(route|get|post|put|patch|delete|api_route)$
+    - pattern: $P
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: $D[$K]
+      - pattern: $D.get($K, ...)
+    - metavariable-regex:
+        metavariable: $D
+        regex: ^[A-Z][A-Z0-9_]*$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: requests.get($U, ...)
+      - pattern: requests.post($U, ...)
+      - pattern: requests.put($U, ...)
+      - pattern: requests.delete($U, ...)
+      - pattern: requests.head($U, ...)
+      - pattern: requests.patch($U, ...)
+      - pattern: requests.request($M, $U, ...)
+      - pattern: httpx.get($U, ...)
+      - pattern: httpx.post($U, ...)
+      - pattern: urllib.request.urlopen($U, ...)
+    - focus-metavariable: $U
+- id: inject-ssrf--js
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  pattern-sanitizers:
+  - patterns:
+    - pattern-either:
+      - pattern: $D[$K]
+      - pattern: $D.get($K, ...)
+    - metavariable-regex:
+        metavariable: $D
+        regex: ^[A-Z][A-Z0-9_]*$
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: fetch($U, ...)
+      - pattern: axios($U, ...)
+      - pattern: axios.get($U, ...)
+      - pattern: axios.post($U, ...)
+      - pattern: got($U, ...)
+      - pattern: http.get($U, ...)
+      - pattern: https.get($U, ...)
+    - focus-metavariable: $U

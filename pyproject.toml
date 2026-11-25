@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wescope"
+version = "0.1.0"
+description = "바이브코딩 웹앱을 내 PC에서 점검하는 로컬 보안 진단 도구"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["pathspec>=0.12", "pyyaml>=6"]
+# Semgrep은 선택 도구: 없으면 semgrep Analyzer가 skipped로 표시된다.
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+wescope = ["rules/**/*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

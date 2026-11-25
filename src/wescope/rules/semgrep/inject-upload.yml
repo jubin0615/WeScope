@@ -1,0 +1,44 @@
+# inject-upload — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-upload
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-434
+    severity: MEDIUM
+    confidence: Likely
+    title_ko: 업로드한 파일 이름을 그대로 써서 저장해요
+    tech_name_ko: 위험한 파일 업로드 (파일명 미검증)
+    why_ko: ../ 가 들어간 파일 이름으로 다른 폴더의 파일을 덮어쓰거나, .html·.php 같은 실행 가능한 파일을 올려 공격할 수 있어요.
+    fix_ko: secure_filename으로 정리하거나 서버가 만든 이름(uuid)으로 저장하고, 확장자를 허용 목록으로 확인하세요.
+    avoid_ko: 클라이언트가 보낸 Content-Type만 믿지 마세요.
+    fix_example: |
+      # 수정 전
+      f.save(os.path.join(UPLOAD_DIR, f.filename))
+      # 수정 후
+      f.save(os.path.join(UPLOAD_DIR, secure_filename(f.filename)))
+    limitations_ko: 파일 크기·확장자 검사는 확인하지 않았어요.
+  mode: taint
+  pattern-sources:
+  - pattern: $F.filename
+  pattern-sanitizers:
+  - pattern: werkzeug.utils.secure_filename(...)
+  - pattern: secure_filename(...)
+  - pattern: uuid.uuid4(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $X.save($P, ...)
+    - focus-metavariable: $P
+- id: inject-upload--js
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  pattern-either:
+  - pattern: $CB(null, $F.originalname)
+  - pattern: $CB(null, <... $F.originalname ...>)

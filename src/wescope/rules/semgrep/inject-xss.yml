@@ -1,0 +1,104 @@
+# inject-xss — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-xss
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-79
+    severity: HIGH
+    confidence: Likely
+    title_ko: 다른 사용자 브라우저에서 악성 스크립트가 실행될 수 있어요
+    tech_name_ko: XSS (크로스 사이트 스크립팅)
+    why_ko: 입력에 <script>를 넣으면 이 페이지를 연 다른 사용자의 브라우저에서 실행되어 로그인 정보를 훔치거나 대신 행동할 수 있어요.
+    fix_ko: HTML로 넣지 말고 텍스트로 넣으세요 (textContent, 템플릿 자동 이스케이프). HTML이 꼭 필요하면 DOMPurify 같은 검증된 필터를 거치세요.
+    avoid_ko: <script> 문자열만 지우는 방식으로 막지 마세요.
+    fix_example: |
+      // 수정 전
+      el.innerHTML = comment
+      // 수정 후
+      el.textContent = comment
+    limitations_ko: 같은 함수 안의 흐름만 확인했어요. React의 dangerouslySetInnerHTML은 값의 출처를 확인하지 않았어요.
+  mode: taint
+  pattern-sources:
+  - pattern: flask.request.$ATTR
+  - patterns:
+    - pattern-inside: |
+        @$APP.$ROUTE(...)
+        def $F(..., $P, ...):
+          ...
+    - metavariable-regex:
+        metavariable: $ROUTE
+        regex: ^(route|get|post|put|patch|delete|api_route)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: escape(...)
+  - pattern: markupsafe.escape(...)
+  - pattern: bleach.clean(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: flask.Markup($X)
+      - pattern: markupsafe.Markup($X)
+      - pattern: Markup($X)
+      - pattern: flask.render_template_string($X, ...)
+      - pattern: render_template_string($X, ...)
+    - focus-metavariable: $X
+- id: inject-xss--js
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - pattern: location.hash
+  - pattern: location.search
+  - pattern: window.location.hash
+  - pattern: window.location.search
+  - pattern: document.URL
+  - pattern: document.referrer
+  - pattern: new URLSearchParams(...)
+  - pattern: document.location.hash
+  pattern-sanitizers:
+  - pattern: DOMPurify.sanitize(...)
+  - pattern: escape(...)
+  - pattern: escapeHtml(...)
+  - pattern: he.encode(...)
+  - pattern: xss(...)
+  - pattern: encodeURIComponent(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $EL.innerHTML = $X
+      - pattern: $EL.outerHTML = $X
+      - pattern: document.write($X)
+      - pattern: $EL.insertAdjacentHTML($P, $X)
+      - pattern: $RES.send(`...${$X}...`)
+      - pattern: $RES.send("..." + $X)
+      - pattern: $RES.send($X + "...")
+    - focus-metavariable: $X
+- id: inject-xss--react
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  metadata:
+    variant_confidence: Potential
+  patterns:
+  - pattern: '<$T dangerouslySetInnerHTML={{__html: $X}} />'
+  - pattern-not: '<$T dangerouslySetInnerHTML={{__html: "..."}} />'
+  - pattern-not: '<$T dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(...)}} />'

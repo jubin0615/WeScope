@@ -1,0 +1,6 @@
+<ul>
+{% for c in comments %}
+  {# expect: inject-xss-template #}
+  <li>{{ c.body|safe }}</li>
+{% endfor %}
+</ul>

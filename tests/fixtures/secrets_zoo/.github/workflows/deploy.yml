@@ -1,0 +1,11 @@
+name: deploy
+on: push
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      # expect: secret-infra-config
+      DEPLOY_TOKEN: {{FAKE:github}}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - run: echo deploy

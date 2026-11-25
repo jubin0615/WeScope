@@ -1,0 +1,42 @@
+# authz-jwt-no-verify — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: authz-jwt-no-verify
+  languages:
+  - python
+  severity: WARNING
+  message: 위험한 패턴입니다
+  metadata:
+    category: WS-02
+    cwe: CWE-347
+    severity: HIGH
+    confidence: Likely
+    title_ko: 로그인 토큰을 위조해도 통과돼요
+    tech_name_ko: JWT 서명 미검증
+    why_ko: 서명을 확인하지 않으면 누구나 토큰 내용을 "관리자"로 바꿔 보내도 그대로 믿어요.
+    fix_ko: jwt.decode에 서명 키와 algorithms=["HS256"]처럼 허용 알고리즘을 지정하고, JS는 jwt.verify를 쓰세요.
+    avoid_ko: decode 결과를 읽기만 하고 서명 검증을 다른 곳에서 한다고 가정하지 마세요.
+    fix_example: |
+      # 수정 전
+      jwt.decode(token, options={"verify_signature": False})
+      # 수정 후
+      jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    limitations_ko: 같은 함수 안만 확인했어요.
+  pattern-either:
+  - pattern: 'jwt.decode(..., options={..., "verify_signature": False, ...}, ...)'
+  - pattern: jwt.decode(..., verify=False, ...)
+  - pattern: jwt.decode(..., algorithms=[..., "none", ...], ...)
+- id: authz-jwt-no-verify--js
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  pattern-either:
+  - patterns:
+    - pattern: $JWT.decode(...)
+    - metavariable-regex:
+        metavariable: $JWT
+        regex: ^(jwt|jsonwebtoken)$
+    - pattern-not-inside: function $F(...) { ... $JWT.verify(...); ... }
+    - pattern-not-inside: ($A) => { ... $JWT.verify(...); ... }
+  - pattern: '$JWT.verify($T, $K, {..., algorithms: [..., ''none'', ...], ...}, ...)'

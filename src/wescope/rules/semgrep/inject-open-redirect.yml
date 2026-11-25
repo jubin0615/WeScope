@@ -1,0 +1,83 @@
+# inject-open-redirect — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-open-redirect
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-601
+    severity: MEDIUM
+    confidence: Likely
+    title_ko: 보낸 주소로 사용자를 다른 사이트에 보내요
+    tech_name_ko: 오픈 리다이렉트
+    why_ko: 우리 사이트 주소로 시작하는 링크라 믿고 눌렀는데 피싱 사이트로 이동하게 만들 수 있어요.
+    fix_ko: 이동할 주소를 내 사이트 경로(/로 시작, //는 거부)나 허용 목록으로 제한하세요.
+    avoid_ko: 도메인 문자열이 포함됐는지만 검사하지 마세요 (evil.com/?my-site.com 같은 우회).
+    fix_example: |
+      # 수정 전
+      return redirect(request.args["next"])
+      # 수정 후
+      next_url = request.args.get("next", "/")
+      if not next_url.startswith("/") or next_url.startswith("//"):
+          next_url = "/"
+      return redirect(next_url)
+    limitations_ko: 같은 함수 안의 흐름만 확인했어요.
+  mode: taint
+  pattern-sources:
+  - pattern: flask.request.$ATTR
+  - patterns:
+    - pattern-inside: |
+        @$APP.$ROUTE(...)
+        def $F(..., $P, ...):
+          ...
+    - metavariable-regex:
+        metavariable: $ROUTE
+        regex: ^(route|get|post|put|patch|delete|api_route)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: url_for(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: flask.redirect($U, ...)
+      - pattern: redirect($U, ...)
+    - focus-metavariable: $U
+- id: inject-open-redirect--js
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  - pattern: location.hash
+  - pattern: location.search
+  - pattern: window.location.hash
+  - pattern: window.location.search
+  - pattern: document.URL
+  - pattern: document.referrer
+  - pattern: new URLSearchParams(...)
+  - pattern: document.location.hash
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $RES.redirect($U)
+      - pattern: $RES.redirect($S, $U)
+      - pattern: window.location = $U
+      - pattern: location.href = $U
+      - pattern: window.location.href = $U
+      - pattern: location.assign($U)
+      - pattern: location.replace($U)
+    - focus-metavariable: $U

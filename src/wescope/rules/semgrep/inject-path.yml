@@ -1,0 +1,84 @@
+# inject-path — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-path
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-22
+    severity: HIGH
+    confidence: Likely
+    title_ko: 보낸 값으로 서버의 다른 파일을 읽거나 지울 수 있어요
+    tech_name_ko: 경로 조작 (Path Traversal)
+    why_ko: ../../etc/passwd 같은 경로를 넣으면 의도한 폴더 밖의 파일(설정·키·소스)을 읽거나 덮어쓸 수 있어요.
+    fix_ko: 파일 이름만 받아 basename·secure_filename으로 정리하고, 허용한 폴더 안인지 확인하세요 (Flask는 send_from_directory).
+    avoid_ko: 입력에서 ../ 문자열만 지우는 방식으로 막지 마세요. 인코딩을 바꾸면 우회돼요.
+    fix_example: |
+      # 수정 전
+      return send_file(os.path.join("uploads", request.args["f"]))
+      # 수정 후
+      return send_from_directory("uploads", secure_filename(request.args["f"]))
+    limitations_ko: 같은 함수 안의 흐름만 확인했어요.
+  mode: taint
+  pattern-sources:
+  - pattern: flask.request.$ATTR
+  - patterns:
+    - pattern-inside: |
+        @$APP.$ROUTE(...)
+        def $F(..., $P, ...):
+          ...
+    - metavariable-regex:
+        metavariable: $ROUTE
+        regex: ^(route|get|post|put|patch|delete|api_route)$
+    - pattern: $P
+  pattern-sanitizers:
+  - pattern: werkzeug.utils.secure_filename(...)
+  - pattern: secure_filename(...)
+  - pattern: os.path.basename(...)
+  - pattern: werkzeug.utils.safe_join(...)
+  - pattern: safe_join(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: open($P, ...)
+      - pattern: flask.send_file($P, ...)
+      - pattern: send_file($P, ...)
+      - pattern: os.remove($P)
+      - pattern: os.unlink($P)
+      - pattern: shutil.rmtree($P, ...)
+    - focus-metavariable: $P
+- id: inject-path--js
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  pattern-sanitizers:
+  - pattern: path.basename(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: $FS.readFile($P, ...)
+      - pattern: $FS.readFileSync($P, ...)
+      - pattern: $FS.createReadStream($P, ...)
+      - pattern: $FS.writeFile($P, ...)
+      - pattern: $FS.writeFileSync($P, ...)
+      - pattern: $FS.unlink($P, ...)
+      - pattern: $FS.unlinkSync($P, ...)
+      - pattern: $RES.sendFile($P)
+      - pattern: $RES.download($P, ...)
+    - focus-metavariable: $P

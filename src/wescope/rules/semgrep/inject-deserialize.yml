@@ -1,0 +1,35 @@
+# inject-deserialize — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-deserialize
+  languages:
+  - python
+  severity: WARNING
+  message: 위험한 패턴입니다
+  metadata:
+    category: WS-05
+    cwe: CWE-502
+    severity: HIGH
+    confidence: Potential
+    title_ko: 외부 데이터를 열 때 공격 코드가 실행될 수 있어요
+    tech_name_ko: 안전하지 않은 역직렬화 (pickle·yaml.load)
+    why_ko: pickle·yaml.load는 데이터를 읽는 순간 그 안의 객체를 만들면서 코드를 실행할 수 있어요. 조작된 파일·요청 하나로 서버를 장악당해요.
+    fix_ko: 외부에서 온 데이터는 json이나 yaml.safe_load로 읽으세요.
+    avoid_ko: pickle 데이터를 base64로 감싸거나 서명 없이 믿지 마세요.
+    fix_example: |
+      # 수정 전
+      config = yaml.load(body)
+      # 수정 후
+      config = yaml.safe_load(body)
+    limitations_ko: 읽는 데이터가 외부에서 오는지는 확인하지 않았어요.
+  pattern-either:
+  - pattern: pickle.loads(...)
+  - pattern: pickle.load(...)
+  - pattern: marshal.loads(...)
+  - pattern: dill.loads(...)
+  - pattern: jsonpickle.decode(...)
+  - pattern: yaml.unsafe_load(...)
+  - patterns:
+    - pattern: yaml.load(...)
+    - pattern-not: yaml.load(..., Loader=yaml.SafeLoader, ...)
+    - pattern-not: yaml.load(..., Loader=yaml.CSafeLoader, ...)
+    - pattern-not: yaml.load(..., Loader=SafeLoader, ...)

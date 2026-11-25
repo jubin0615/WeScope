@@ -1,0 +1,39 @@
+# inject-xss-template — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-xss-template
+  languages:
+  - regex
+  severity: WARNING
+  message: 위험한 패턴입니다
+  metadata:
+    category: WS-05
+    cwe: CWE-79
+    severity: MEDIUM
+    confidence: Potential
+    title_ko: 템플릿이 값을 HTML 그대로 출력해요
+    tech_name_ko: XSS (템플릿 자동 이스케이프 해제)
+    why_ko: 출력하는 값에 사용자 입력이 섞이면 다른 사용자 브라우저에서 스크립트가 실행될 수 있어요.
+    fix_ko: '|safe·v-html 같은 해제 표시를 지우고 기본 이스케이프를 쓰세요. HTML이 꼭 필요하면 서버에서 DOMPurify·bleach로 걸러서 넘기세요.'
+    avoid_ko: 값을 믿을 수 있다고 가정하고 해제 표시를 남기지 마세요.
+    fix_example: |
+      {# 수정 전 #}
+      {{ comment|safe }}
+      {# 수정 후 #}
+      {{ comment }}
+    limitations_ko: 출력하는 값이 사용자 입력에서 오는지는 확인하지 않았어요.
+  paths:
+    include:
+    - '*.html'
+    - '*.htm'
+    - '*.jinja'
+    - '*.jinja2'
+    - '*.j2'
+    - '*.vue'
+    - '*.svelte'
+    - '*.astro'
+  pattern-either:
+  - pattern-regex: \|\s*safe\b
+  - pattern-regex: \{%-?\s*autoescape\s+(false|off)
+  - pattern-regex: \bv-html\s*=
+  - pattern-regex: \{@html\s
+  - pattern-regex: \bset:html\s*=

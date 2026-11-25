@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+build/
+dist/
+
+# 로컬 전용 문서
+docs/IMPLEMENTATION_PLAN.md

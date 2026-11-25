@@ -1,0 +1,56 @@
+# WS-02 인증·인가 누락 — analyzers/routes (RULES.md §2). authz-jwt-no-verify는 rules/semgrep에 있다.
+- id: authz-admin-route
+  category: WS-02
+  cwe: CWE-862
+  severity: HIGH
+  confidence: Potential
+  title_ko: "관리자 기능을 관리자가 아니어도 쓸 수 있어 보여요"
+  tech_name_ko: "관리자 경로 권한 확인 누락"
+  why_ko: "화면에서 메뉴를 숨겨도 API 주소를 알면 누구나 호출할 수 있어요. 일반 사용자가 다른 사람 계정을 지우거나 권한을 바꿀 수 있어요."
+  fix_ko: "관리자 라우트마다 서버에서 관리자 역할을 확인하세요 (데코레이터·미들웨어·의존성)."
+  avoid_ko: "로그인 여부만 확인하거나 프론트엔드에서만 막지 마세요."
+  fix_example: |
+    # 수정 전
+    @app.route("/admin/users/<int:user_id>", methods=["DELETE"])
+    @login_required
+    def delete_user(user_id): ...
+    # 수정 후
+    @app.route("/admin/users/<int:user_id>", methods=["DELETE"])
+    @login_required
+    @admin_required
+    def delete_user(user_id): ...
+  limitations_ko: "상위 미들웨어·리버스 프록시·게이트웨이의 권한 확인은 보지 못했어요."
+
+- id: authz-idor
+  category: WS-02
+  cwe: CWE-639
+  severity: HIGH
+  confidence: Potential
+  title_ko: "주소의 번호만 바꾸면 다른 사람 데이터를 볼 수 있어 보여요"
+  tech_name_ko: "IDOR (소유자 확인 없는 객체 조회)"
+  why_ko: "로그인한 사용자가 URL의 id만 바꿔서 다른 사람의 주문·글·개인정보를 읽거나 바꿀 수 있어요."
+  fix_ko: "조회 조건에 현재 사용자를 함께 넣거나, 꺼낸 데이터의 소유자가 현재 사용자인지 확인하세요."
+  avoid_ko: "id를 추측하기 어렵게(UUID) 바꾸는 것만으로 끝내지 마세요."
+  fix_example: |
+    # 수정 전
+    order = Order.query.get_or_404(order_id)
+    # 수정 후
+    order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+  limitations_ko: "같은 함수 안의 소유자 조건만 확인했어요. 다른 계층(서비스·DB 정책)에서 확인하는지는 보지 못했어요."
+
+- id: authz-no-auth-write
+  category: WS-02
+  cwe: CWE-306
+  severity: HIGH
+  confidence: Potential
+  title_ko: "로그인하지 않아도 데이터를 바꾸는 API를 부를 수 있어 보여요"
+  tech_name_ko: "인증 없는 쓰기 API"
+  why_ko: "누구나 이 API로 데이터를 만들거나 고치거나 지울 수 있어요."
+  fix_ko: "쓰기 라우트에 인증 확인(데코레이터·미들웨어·의존성)을 붙이세요."
+  avoid_ko: "요청 본문에 user_id를 받아서 그 값을 믿는 방식으로 인증을 대신하지 마세요."
+  fix_example: |
+    // 수정 전
+    router.post("/posts", async (req, res) => { await Post.create(req.body) })
+    // 수정 후
+    router.post("/posts", requireAuth, async (req, res) => { await Post.create({ ...req.body, userId: req.user.id }) })
+  limitations_ko: "상위 미들웨어·게이트웨이의 인증은 보지 못했어요."

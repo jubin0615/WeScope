@@ -1,0 +1,70 @@
+# inject-code — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: inject-code
+  languages:
+  - python
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  metadata:
+    category: WS-05
+    cwe: CWE-94
+    severity: HIGH
+    confidence: Likely
+    title_ko: 보낸 값이 서버에서 코드로 실행될 수 있어요
+    tech_name_ko: 코드 인젝션 (eval·exec)
+    why_ko: 공격자가 보낸 문자열이 서버에서 프로그램 코드로 실행되어, 서버 파일·DB·비밀키를 모두 가져갈 수 있어요.
+    fix_ko: eval·exec를 쓰지 말고 필요한 값만 파싱하세요 (숫자는 int(), 데이터는 json.loads, 수식은 전용 파서).
+    avoid_ko: 입력에서 위험해 보이는 단어만 걸러 내는 방식으로 막지 마세요.
+    fix_example: |
+      # 수정 전
+      result = eval(request.args["expr"])
+      # 수정 후
+      result = json.loads(request.args["data"])
+    limitations_ko: 같은 함수 안의 흐름만 확인했어요.
+  mode: taint
+  pattern-sources:
+  - pattern: flask.request.$ATTR
+  - patterns:
+    - pattern-inside: |
+        @$APP.$ROUTE(...)
+        def $F(..., $P, ...):
+          ...
+    - metavariable-regex:
+        metavariable: $ROUTE
+        regex: ^(route|get|post|put|patch|delete|api_route)$
+    - pattern: $P
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: eval($X, ...)
+      - pattern: exec($X, ...)
+    - focus-metavariable: $X
+- id: inject-code--js
+  languages:
+  - javascript
+  - typescript
+  severity: ERROR
+  message: 외부 입력이 위험한 함수에 도달합니다
+  mode: taint
+  pattern-sources:
+  - patterns:
+    - pattern-either:
+      - pattern: $REQ.body
+      - pattern: $REQ.query
+      - pattern: $REQ.params
+      - pattern: $REQ.headers
+      - pattern: $REQ.cookies
+    - metavariable-regex:
+        metavariable: $REQ
+        regex: ^(req|request)$
+  pattern-sanitizers:
+  - pattern: parseInt(...)
+  - pattern: Number(...)
+  pattern-sinks:
+  - patterns:
+    - pattern-either:
+      - pattern: eval($X)
+      - pattern: new Function(..., $X)
+      - pattern: vm.runInNewContext($X, ...)
+      - pattern: vm.runInThisContext($X, ...)
+    - focus-metavariable: $X

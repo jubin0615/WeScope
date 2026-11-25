@@ -1,0 +1,32 @@
+# We-Scope Top 10 — PRD §5. owasp는 대표 OWASP 2025 카테고리 (검사 범위 계산에 사용)
+items:
+  - code: WS-01
+    name_ko: 비밀값 노출
+    owasp: ["A07:2025", "A01:2025"]
+  - code: WS-02
+    name_ko: 인증·인가 누락
+    owasp: ["A01:2025", "A04:2025", "A07:2025"]
+  - code: WS-03
+    name_ko: 데이터 계층 공개
+    owasp: ["A01:2025"]
+  - code: WS-04
+    name_ko: 위험한 의존성
+    owasp: ["A03:2025", "A08:2025"]
+  - code: WS-05
+    name_ko: 입력값 주입
+    owasp: ["A05:2025", "A01:2025", "A06:2025", "A08:2025"]
+  - code: WS-06
+    name_ko: 위험한 기본값
+    owasp: ["A02:2025", "A04:2025", "A07:2025", "A10:2025"]
+  - code: WS-07
+    name_ko: 웹훅·결제 검증 누락
+    owasp: ["A08:2025", "A06:2025"]
+  - code: WS-08
+    name_ko: 남용 방지 부재
+    owasp: ["A07:2025"]
+  - code: WS-09
+    name_ko: LLM 연동 취약
+    owasp: ["A05:2025"]
+  - code: WS-10
+    name_ko: AI 에이전트 설정 오염
+    owasp: ["A08:2025"]

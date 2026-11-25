@@ -1,0 +1,68 @@
+# config-js — RULES.md §2. 같은 rule_id의 다른 언어·패턴은 '<rule_id>--<변형>' id를 쓴다.
+rules:
+- id: config-cors-wildcard--js
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  pattern-either:
+  - pattern: cors()
+  - patterns:
+    - pattern: 'cors({..., origin: ''*'', ...})'
+    - pattern-not: 'cors({..., credentials: true, ...})'
+  - pattern: $RES.setHeader('Access-Control-Allow-Origin', '*')
+  - pattern: $RES.header('Access-Control-Allow-Origin', '*')
+  - pattern: $RES.set('Access-Control-Allow-Origin', '*')
+- id: config-cors-credentials--js
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  patterns:
+  - pattern-either:
+    - pattern: 'cors({..., origin: ''*'', ...})'
+    - pattern: 'cors({..., origin: true, ...})'
+  - pattern: 'cors({..., credentials: true, ...})'
+- id: config-cookie-flags--js
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  pattern-either:
+  - patterns:
+    - pattern: $RES.cookie($N, $V)
+    - metavariable-regex:
+        metavariable: $N
+        regex: (?i).*(session|token|auth|sid|jwt|remember)
+  - patterns:
+    - pattern: $RES.cookie($N, $V, {...})
+    - pattern-not: '$RES.cookie($N, $V, {..., httpOnly: true, ...})'
+    - metavariable-regex:
+        metavariable: $N
+        regex: (?i).*(session|token|auth|sid|jwt|remember)
+  - patterns:
+    - pattern: $RES.cookie($N, $V, {...})
+    - pattern-not: '$RES.cookie($N, $V, {..., secure: true, ...})'
+    - metavariable-regex:
+        metavariable: $N
+        regex: (?i).*(session|token|auth|sid|jwt|remember)
+  - pattern: 'session({..., cookie: {..., secure: false, ...}, ...})'
+  - pattern: 'session({..., cookie: {..., httpOnly: false, ...}, ...})'
+- id: config-weak-secret--js
+  languages:
+  - javascript
+  - typescript
+  severity: WARNING
+  message: 위험한 패턴입니다
+  patterns:
+  - pattern-either:
+    - pattern: jwt.sign($P, "$S", ...)
+    - pattern: jwt.verify($T, "$S", ...)
+    - pattern: 'session({..., secret: "$S", ...})'
+    - pattern: cookieParser("$S")
+  - metavariable-regex:
+      metavariable: $S
+      regex: ^.{0,31}$
