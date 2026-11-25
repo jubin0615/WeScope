@@ -29,7 +29,7 @@ def test_report_has_every_finding_and_no_secret(name, tmp_path):
 
 
 def test_clean_report_says_no_open_findings(tmp_path, monkeypatch):
-    monkeypatch.setattr("wescope.analyzers.semgrep.shutil.which", lambda _: None)
+    monkeypatch.setattr("wescope.analyzers.semgrep.find_semgrep", lambda: None)
     root, _ = materialize("clean_app", tmp_path)
     report = render(run_scan(Target("folder", str(root))))
     assert "열린 발견이 없어요" in report and "첫 검사예요" in report

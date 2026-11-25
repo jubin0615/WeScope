@@ -20,7 +20,7 @@ BASE = f"http://127.0.0.1:{PORT}"
 @pytest.fixture
 def client(monkeypatch):
     """로그인(티켓→쿠키)까지 마친 클라이언트. 서버 동작만 보므로 Semgrep은 끈다."""
-    monkeypatch.setattr("wescope.analyzers.semgrep.shutil.which", lambda _: None)
+    monkeypatch.setattr("wescope.analyzers.semgrep.find_semgrep", lambda: None)
     with TestClient(create_app(TICKET, PORT), base_url=BASE) as c:
         assert c.get(f"/?ticket={TICKET}", follow_redirects=False).status_code == 303
         yield c
