@@ -36,7 +36,7 @@ export function where(f) {
   return route || (line > 0 ? `${file}:${line}` : file);
 }
 
-function tags(group, tab, firstScan) {
+export function tags(group, tab, firstScan) {
   if (tab === "fixed") return ["FIXED"];
   if (tab === "dismissed") return ["오탐"];
   const any = (test) => group.findings.some(test);
@@ -48,7 +48,7 @@ function tags(group, tab, firstScan) {
   ].filter(Boolean);
 }
 
-const TAG_CLASS = { NEW: "tag-new", AI: "tag-ai", "AI 확인": "tag-ai" };
+export const TAG_CLASS = { NEW: "tag-new", AI: "tag-ai", "AI 확인": "tag-ai" };
 const shorten = (text, max = 44) => (text.length > max ? `…${text.slice(-(max - 1))}` : text);
 
 export function renderList(el, { list, tab, selected, firstScan, onSelect }) {

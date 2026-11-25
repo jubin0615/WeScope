@@ -50,6 +50,9 @@ def test_ticket_becomes_cookie_and_is_required():
         assert "httponly" in resp.headers["set-cookie"].lower() and "samesite=strict" in resp.headers["set-cookie"].lower()
         assert c.get("/api/state").json() == {"repos": 0, "last_repo": None, "running": None}
         assert c.get("/healthz").json()["app"] == "wescope"
+        names = c.get("/api/catalog").json()
+        assert [w["code"] for w in names["ws"]] == [f"WS-{i:02}" for i in range(1, 11)] and names["ws"][4]["name_ko"] == "입력값 주입"
+        assert [o["code"] for o in names["owasp"]][:2] == ["A01:2025", "A02:2025"] and names["owasp"][4]["name"] == "Injection"
         assert c.get("/static/app.css").headers["content-type"].startswith("text/css")
         assert c.get("/static/fonts/PretendardVariable.woff2").status_code == 200
         assert c.get("/static/%2e%2e/server/app.py").status_code == 404           # web/ 밖은 못 읽음

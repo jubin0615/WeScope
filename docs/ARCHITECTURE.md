@@ -357,6 +357,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `GET /?ticket=…` | `303 → /` + `wescope_ticket` 쿠키 (HttpOnly, SameSite=Strict) | 401 |
 | `GET /healthz` (티켓 불필요) | `{"app": "wescope", "pid": 1234}` | — |
 | `GET /api/state` | `{"repos": 2, "last_repo": "<repo_id>" \| null, "running": Job \| null}` | — |
+| `GET /api/catalog` (F3 추가) | `{"ws": [{"code": "WS-01", "name_ko": "비밀값 노출"}, …], "owasp": [{"code": "A01:2025", "name": "Broken Access Control"}, …]}` — 화면이 코드값에 붙이는 이름 | — |
 | `GET /api/repos` | `[Repo, …]` | — |
 | `POST /api/repos` `{"path": "…"}` 또는 `{"github": "https://github.com/o/r", "branch"?: "…"}` (+ `"name"?`) | `201 {"repo": Repo, "scan_id": "…"}` — 바로 첫 검사를 큐에 넣음 | 400 (둘 다/둘 다 없음, 없는 폴더, GitHub 형식 아님) |
 | `DELETE /api/repos/{id}` | `204` — 이력·결과 JSON·전용 clone 삭제 | 404, 409 (검사 중) |

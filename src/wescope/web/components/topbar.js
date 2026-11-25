@@ -34,7 +34,7 @@ function topSeverity(repo) {
 }
 
 function projectMenu({ repos, repo }, { selectRepo, addRepo }) {
-  const menu = h("details", { className: "project-menu" },
+  const menu = h("details", { className: "project-menu popover" },
     h("summary", { textContent: repo.name }),
     h("div", { className: "menu" },
       ...repos.map((r) => {
@@ -50,7 +50,7 @@ function projectMenu({ repos, repo }, { selectRepo, addRepo }) {
   return menu;
 }
 
-function statusLine({ repo, result, job, failed, offline }) {
+function statusLine({ repo, result, job, failed, offline }, { openCoverage }) {
   if (offline) return h("p", { className: "status status-bad", textContent: OFFLINE });
   if (job && result) return renderProgress(job);   // 첫 검사의 진행 표시는 가운데 판에
   if (failed) return h("p", { className: "status status-bad", textContent: `검사하지 못했어요: ${failed}` });
@@ -61,7 +61,8 @@ function statusLine({ repo, result, job, failed, offline }) {
   const skipped = result.analyzers.some((a) => a.status === "skipped" || a.status === "failed");
   return h("p", { className: "status", title: new Date(result.scanned_at).toLocaleString("ko-KR") },
     parts.join(" · "),
-    skipped && h("span", { className: "status-warn", textContent: " · 일부 검사 건너뜀" }));
+    skipped && " · ",
+    skipped && h("button", { type: "button", className: "link status-warn", textContent: "일부 검사 건너뜀", onclick: openCoverage }));
 }
 
 export function renderTopbar(el, view, actions) {
@@ -71,7 +72,7 @@ export function renderTopbar(el, view, actions) {
   el.replaceChildren(
     h("h1", { className: "brand", textContent: "We-Scope" }),
     projectMenu(view, actions),
-    statusLine(view),
+    statusLine(view, actions),
     h("span", { className: "spacer" }),
     rescan);
 }

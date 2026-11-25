@@ -167,3 +167,51 @@ button, input { font: inherit; color: inherit; }
 .dialog::backdrop { background: var(--overlay); }
 .dialog .start { margin: 0; }
 .dialog-close { position: absolute; top: var(--s4); right: var(--s4); z-index: 1; border: 0; background: transparent; color: var(--text-2); font-size: 18px; cursor: pointer; }
+
+/* 공통 글자 모양 */
+.mono { font-family: var(--mono); font-size: 12px; letter-spacing: 0; }
+.link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.status .link { color: var(--sev-medium); }
+.code { margin: var(--s2) 0 0; padding: var(--s3) var(--s4); overflow-x: auto; background: var(--surface-2); border-radius: var(--r-sm);
+  font: 12px/1.7 var(--mono); letter-spacing: 0; white-space: pre; }
+.notice-blue, .notice-green, .notice-amber { margin: var(--s4) 0 0; padding: var(--s3) var(--s4); border-radius: var(--r-md); font-size: 13px; }
+.notice-blue { background: var(--tint-blue); } .notice-green { background: var(--tint-green); } .notice-amber { background: var(--tint-amber); }
+
+/* 상세 (§3-6) */
+.detail-pane { display: flex; flex-direction: column; }
+.detail-tags { display: flex; align-items: baseline; gap: var(--s2); }
+.detail-tabs { display: flex; gap: var(--s1); margin: var(--s5) 0 0; padding-bottom: var(--s2); border-bottom: 1px solid var(--border); }
+.detail-tabs .tab[aria-selected="true"] { background: var(--select); color: var(--text); box-shadow: none; }
+.detail-body { flex: 1; padding-top: var(--s4); }
+.detail-section + .detail-section { margin-top: var(--s5); }
+.detail-section h3 { margin: 0 0 var(--s2); font-size: 14px; font-weight: 650; }
+.prose { line-height: 1.75; white-space: pre-wrap; }
+.place { padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
+.place-head { display: flex; gap: var(--s2); align-items: baseline; }
+.meta { display: grid; grid-template-columns: 110px 1fr; gap: var(--s2) var(--s4); margin: 0; }
+.meta dt { color: var(--text-2); font-size: 13px; }
+.meta dd { margin: 0; }
+.detail-actions { display: flex; gap: var(--s2); padding-top: var(--s5); margin-top: var(--s5); border-top: 1px solid var(--border); }
+
+/* 보고서 메뉴 (§3-3) */
+.report-menu { position: relative; }
+.report-menu > summary { list-style: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); }
+.report-menu > summary::-webkit-details-marker { display: none; }
+.menu-right { left: auto; right: 0; width: 240px; }
+a.menu-item { display: block; color: inherit; text-decoration: none; }
+
+/* 검사 범위 (§3-7) */
+.coverage-pane { flex: 1; min-height: 0; overflow-y: auto; margin: 0 var(--s6) var(--s6); padding: var(--s6); }
+.coverage-pane > .notice-blue { margin-top: 0; }
+.coverage-pane h3 { margin: var(--s6) 0 var(--s2); font-size: 15px; }
+table.coverage { width: 100%; border-collapse: collapse; font-size: 13px; }
+.coverage th { text-align: left; font-weight: 600; color: var(--text-2); padding: var(--s2); border-bottom: 1px solid var(--border); }
+.coverage td { padding: var(--s2); border-bottom: 1px solid var(--border); vertical-align: top; }
+.coverage td.num { text-align: right; width: 56px; }
+.coverage th:nth-child(3) { text-align: right; }
+.state-icon { display: inline-block; width: 1.4em; font-weight: 700; }
+.icon-bad { color: var(--sev-high); } .icon-good { color: var(--accent); } .icon-warn { color: var(--sev-medium); }
+.icon-muted { color: var(--text-3); } .icon-info { color: var(--accent-2); }
+.tools { margin-top: var(--s6); font-size: 13px; color: var(--text-2); }
+.tools summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.tools ul { padding-left: 1.2em; }

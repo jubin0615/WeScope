@@ -34,3 +34,13 @@ def test_clean_report_says_no_open_findings(tmp_path, monkeypatch):
     report = render(run_scan(Target("folder", str(root))))
     assert "열린 발견이 없어요" in report and "첫 검사예요" in report
     assert "| semgrep | WS-05, WS-02, WS-06 | 건너뜀 | semgrep이 설치되어 있지 않아요 |" in report
+
+
+def test_web_wording_matches_report():
+    """화면(web/wording.js)과 보고서가 같은 한국어 표기를 쓴다. 한쪽만 고치면 실패한다."""
+    import json
+    from wescope.paths import RULES_DIR
+    from wescope.report import wording as W
+    js = (RULES_DIR.parent / "web" / "wording.js").read_text(encoding="utf-8")
+    for name in ("STATE_KO", "ANALYZER_STATUS_KO", "CHANGE_KO", "OWASP_SCOPE_TITLE", "NOT_A_GUARANTEE", "LIMITS"):
+        assert f"export const {name} = {json.dumps(getattr(W, name), ensure_ascii=False)};" in js, name
