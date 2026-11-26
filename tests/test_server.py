@@ -233,8 +233,38 @@ def test_hook_needs_local_git_folder_and_global_settings(client, tmp_path):
     for path in ("/api/repos/nope/history", "/api/repos/nope/ignores"):
         assert client.get(path).status_code == 404
 
-    assert client.get("/api/settings").json() == {"theme": "system"}
+    defaults = {"theme": "system", "ai_level": "deep", "ai_on_hook": False}
+    assert client.get("/api/settings").json() == defaults
     assert client.post("/api/settings", json={"theme": "blue"}).status_code == 400
-    assert client.post("/api/settings", json={"theme": "dark"}).json() == {"theme": "dark"}
-    assert client.post("/api/settings", json={}).json() == {"theme": "dark"}   # 보낸 항목만 바뀐다
+    assert client.post("/api/settings", json={"ai_level": "max"}).status_code == 400
+    assert client.post("/api/settings", json={"theme": "dark"}).json() == {**defaults, "theme": "dark"}
+    assert client.post("/api/settings", json={"ai_on_hook": True}).json() == {**defaults, "theme": "dark",
+                                                                               "ai_on_hook": True}   # 보낸 항목만 바뀐다
     assert 'theme = "dark"' in (home() / "config.toml").read_text(encoding="utf-8")
+
+
+def test_fix_api_attaches_fix_to_latest_scan(client, tmp_path, monkeypatch):
+    from test_llm.fake_chatgpt import FakeChatGPT, answer, replace_lines
+    root, _ = materialize("vuln_flask", tmp_path)
+    added = client.post("/api/repos", json={"path": str(root)}).json()
+    first = added["scan_id"]
+    wait(client, first)
+    url = f"/api/scans/{first}/groups/config-weak-secret/fix"
+    assert client.post(url).status_code == 409                          # ChatGPT 연결 전
+
+    weak = 'app.config["SECRET_KEY"] = "dev"'
+    fake = FakeChatGPT(lambda p: answer(replace_lines(p, "app.py", {weak: 'app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]'}))
+                       if p["rule"]["rule_id"] == "config-weak-secret" else answer("x"))
+    monkeypatch.setattr("wescope.llm.client.connected", lambda: fake)
+    assert client.post(f"/api/scans/{first}/groups/no-such-rule/fix").status_code == 404
+    started = client.post(url)
+    assert started.status_code == 202 and started.json() == {"scan_id": first}
+    kind, job = wait(client, first)[-1]
+    assert kind == "done" and job["rule_id"] == "config-weak-secret"
+    fixed = next(f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "config-weak-secret")
+    assert fixed["fix"]["verification"] == "verified"
+
+    again = client.post("/api/scans", json={"repo_id": added["repo"]["id"]}).json()["scan_id"]   # AI 연결 후 검사
+    wait(client, again)
+    assert client.get(f"/api/scans/{again}").json()["ai"]["fixes"]["verified"] == 1   # HIGH 묶음 자동 생성
+    assert client.post(url).status_code == 409                          # 예전 검사에는 만들지 않는다

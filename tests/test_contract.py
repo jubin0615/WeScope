@@ -21,7 +21,7 @@ FINDING = ["rule_id", "category", "cwe", "owasp", "severity", "confidence", "tit
 
 def test_samples_exist():
     assert {p.stem for p in SAMPLES} == {"first-scan", "rescan-new-fixed-dismissed", "secrets-git", "clean",
-                                         "semgrep-skipped"}
+                                         "semgrep-skipped", "with-fix"}
 
 
 @pytest.mark.parametrize("path", SAMPLES, ids=lambda p: p.stem)
@@ -43,3 +43,20 @@ def test_rescan_sample_covers_change_states():
     assert {f["change"] for f in data["findings"]} == {"new", "existing", "fixed"}
     assert {f["status"] for f in data["findings"]} == {"open", "dismissed"}
     assert data["baseline_scan"]
+
+
+FIX = ["summary_ko", "diff", "files", "behavior_change_ko", "follow_ups", "new_dependencies", "test_hint_ko", "confidence",
+       "verification", "checks", "attempts", "cache_key", "instruction_suspect"]
+AI = ["level", "model", "requests", "cache_hits", "fixes", "budget_exceeded", "remaining_groups", "error"]
+
+
+def test_fix_sample_matches_fixer_output_shape():
+    """B8: 수정안(fix)·AI 요약(ai) 형식. llm/fixer.py가 만드는 키와 같아야 한다 (AI.md §3-3·§3-4)."""
+    from wescope.llm import fixer
+    data = json.loads((Path(__file__).parent / "fixtures/results/with-fix.json").read_text("utf-8"))
+    fixes = [f["fix"] for f in data["findings"] if f["fix"]]
+    assert {f["verification"] for f in fixes} == {"verified", "failed"}
+    for fix in fixes:
+        assert list(fix) == FIX and list(fix["checks"]) == ["apply", "syntax", "rescan", "reasons"]
+    assert list(data["ai"]) == AI and list(data["ai"]["fixes"]) == ["verified", "partial", "failed"]
+    assert FIX[:8] == list(fixer._FIELDS)

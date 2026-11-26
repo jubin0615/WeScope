@@ -9,10 +9,13 @@ FORBIDDEN = {
                "wescope.store", "wescope.report"),
     "taxonomy": ("wescope.collector", "wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store"),
     "collector": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store", "wescope.report"),
-    "analyzers": ("wescope.engine", "wescope.scan", "wescope.store", "wescope.report"),
+    "analyzers": ("wescope.engine", "wescope.scan", "wescope.store", "wescope.report", "wescope.llm"),
     "engine": ("wescope.analyzers.secrets", "wescope.analyzers.routes", "wescope.analyzers.semgrep",
                "wescope.analyzers.config", "wescope.analyzers.registry", "wescope.collector.snapshot", "wescope.scan",
-               "wescope.store", "wescope.report"),
+               "wescope.store", "wescope.report", "wescope.llm"),
+    # ChatGPT 분석은 Finding·ScanContext만 받는다. 재검사는 scan.py가 함수로 넘긴다 (DIRECTORY_STRUCTURE §2)
+    "llm": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store", "wescope.server", "wescope.report",
+            "wescope.collector"),
     # 저장·보고서는 결과를 옮길 뿐 판단하지 않는다
     "store": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.report"),
     "report": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store", "wescope.collector"),

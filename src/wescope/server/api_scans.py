@@ -1,4 +1,4 @@
-"""스캔 시작·진행(SSE)·결과·내려받기."""
+"""스캔 시작·진행(SSE)·결과·내려받기·수정안 만들기."""
 import asyncio
 import json
 from pathlib import PurePath
@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from wescope.llm import client as llm_client
+from wescope.llm.fixer import groups
 from wescope.report.markdown import render
 from wescope.server.api_repos import get_or_404
 from wescope.store import history, results
@@ -17,6 +19,10 @@ FINISHED = ("done", "failed")
 
 class ScanIn(BaseModel):
     repo_id: str
+
+
+class FixIn(BaseModel):
+    retry: bool = False       # [다른 수정안]: 지금 수정안을 채택하지 않고 새로 만든다
 
 
 @router.post("/scans", status_code=202)
@@ -49,6 +55,20 @@ def load_result(scan_id: str, request: Request):
 @router.get("/scans/{scan_id}")
 def get_scan(scan_id: str, request: Request):
     return Response(load_result(scan_id, request).to_json(), media_type="application/json")
+
+
+@router.post("/scans/{scan_id}/groups/{rule_id}/fix", status_code=202)
+def make_fix(scan_id: str, rule_id: str, request: Request, body: FixIn | None = None):
+    """[수정안 만들기]·[다른 수정안]. 작업 큐에서 만들고 그 검사의 결과 JSON에 붙인다. 진행은 같은 scan_id의 SSE."""
+    result = load_result(scan_id, request)
+    if history.latest_scan_id(result.repo) != scan_id:
+        raise HTTPException(409, "수정안은 가장 최근 검사에서만 만들 수 있어요. 다시 스캔한 뒤 시도하세요")
+    if not any(g[0].rule_id == rule_id for g in groups(result.findings)):
+        raise HTTPException(404, "이 검사에 그 규칙의 열린 위험 후보가 없어요")
+    if llm_client.connected() is None:
+        raise HTTPException(409, "ChatGPT에 연결한 뒤에 수정안을 만들 수 있어요")
+    job = request.app.state.jobs.submit(result.repo, rule_id=rule_id, scan_id=scan_id, retry=bool(body and body.retry))
+    return {"scan_id": job.scan_id}
 
 
 @router.get("/scans/{scan_id}/events")

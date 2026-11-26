@@ -27,6 +27,10 @@ class SecretRegistry:
             text = text.replace(value, self._masks[value])
         return text
 
+    def values(self) -> list[str]:
+        """원문 목록 (ChatGPT로 보내기 전 자리표시로 바꿀 때만 쓴다). 긴 것부터: 짧은 값이 긴 값의 일부일 수 있다."""
+        return sorted(self._masks, key=lambda v: (-len(v), v))
+
 
 @dataclass
 class ScanContext:

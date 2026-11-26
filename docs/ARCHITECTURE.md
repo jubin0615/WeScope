@@ -268,7 +268,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `introduced_in` | 처음 발견된 커밋 |
 | `status` | open / dismissed(사용자 확정) |
 | `triage` | ChatGPT 판단 (`verdict`: confirmed / protected / unclear, `suggested`, `reason_ko`, `impact_ko`, 근거 위치), 사용자 확인 여부, 지시문 의심 표시 |
-| `fix` | 수정안 (그룹 단위, 같은 `rule_id`의 대표 발견에 붙음): `summary_ko`, `diff`, `files`, `behavior_change_ko`, `follow_ups`, `new_dependencies`, `test_hint_ko`, `verification`(`verified` / `partial` / `failed` + 단계별 결과), `attempts`, `cache_key` |
+| `fix` | 수정안 (그룹 단위, 같은 `rule_id`의 대표(첫) 발견에 붙음): `summary_ko`, `diff`(비밀값은 `«WS_SECRET_n»` 자리표시 그대로), `files`, `behavior_change_ko`, `follow_ups`, `new_dependencies`, `test_hint_ko`, `confidence`, `verification`(`verified` / `partial` / `failed`), `checks`(`apply`·`syntax`·`rescan`: true/false/null, `reasons`: 실패 이유 문장), `attempts`(1~2), `cache_key`, `instruction_suspect`(보낸 코드에 지시문 같은 텍스트가 있었음). 샘플: `tests/fixtures/results/with-fix.json` |
 | `chain`, `related` | 체인 발견일 때 구성 발견 |
 
 ### ScanResult (JSON 최상위)
@@ -286,7 +286,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `ai_coverage` | ChatGPT 검토 범위(업무 로직 인가·결제·파일 간 흐름·미지원 언어) 상태 |
 | `findings` | Finding[] |
 | `summary` | 심각도별 개수, new/fixed 개수, 위험 점수 |
-| `ai` | 분석 수준, 요청 수·캐시 적중 수, 수정안 생성·검증 수, AI 발견·폐기 수, 예산 초과 여부, 실패 사유 |
+| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model", "requests", "cache_hits", "fixes": {"verified", "partial", "failed"}, "budget_exceeded", "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message"} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
 
 ---
 
@@ -357,7 +357,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 ### 7-1. 구현된 API 형식 (B6 동결)
 
 > 이 표와 `tests/fixtures/results/*.json`이 대시보드와 서버 사이의 계약이다. 바꾸려면 이 표 → 서버 → 샘플·테스트 순으로 바꾼다.
-> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. 표에 없는 행(수정안·로그인)은 B8에서 추가한다. B7에서 추가한 행은 `(B7)`로 표시했다.
+> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. 표에 없는 행(로그인)은 B8-2에서 추가한다. B7·B8에서 추가한 행은 `(B7)`·`(B8)`로 표시했다.
 
 | 요청 | 성공 응답 | 실패 |
 |---|---|---|
@@ -380,12 +380,13 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `GET /api/repos/{id}/ignores` (B7) | `[{"fingerprint", "reason", "created_at"}, …]` 표시한 순서 | 404 |
 | `POST /api/repos/{id}/ignores` `{"fingerprint", "reason"?}` (B7) | `201` + 위 목록. **다음 검사부터** 그 발견이 `dismissed` (지금 결과 JSON은 바뀌지 않음) | 400 (지문 형식, 이유 500자 초과), 404 (최근 결과에 없는 지문) |
 | `DELETE /api/repos/{id}/ignores/{fingerprint}` (B7) | `204` — 다음 검사부터 다시 `open` | 404 |
-| `GET /api/settings` (B7) | `{"theme": "system"\|"light"\|"dark"}` — `~/.wescope/config.toml` | — |
+| `GET /api/settings` (B7, B8에서 `ai_*` 추가) | `{"theme": "system"\|"light"\|"dark", "ai_level": "deep"\|"basic"\|"off", "ai_on_hook": bool}` — `~/.wescope/config.toml`. 기본 `system`·`deep`·`false`. `ai_on_hook`이 false면 커밋 자동 검사에서는 ChatGPT를 쓰지 않는다 (AI.md §2) | — |
 | `POST /api/settings` (B7, 보낸 항목만 바뀜) | 위와 같은 형식 | 400 (허용 값 아님) |
+| `POST /api/scans/{scan_id}/groups/{rule_id}/fix` `{"retry"?: bool}` (B8) | `202 {"scan_id"}` — [수정안 만들기]·`retry`면 [다른 수정안](지금 diff를 채택하지 않음으로 넘김). 작업 큐에서 지금 파일 기준으로 만들고 그 검사의 결과 JSON 대표 발견 `fix`에 붙여 다시 저장한다. 진행은 같은 `/api/scans/{scan_id}/events` (Job `rule_id`가 채워짐) | 404 (검사 없음, 그 규칙의 열린 발견 없음), 409 (가장 최근 검사가 아님, ChatGPT 연결 전) |
 
 - **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "hook": bool | null, "last_scan": ScanSummary | null}` — `hook`(B7)은 hook 파일에서 바로 읽은 자동 검사 켜짐 여부, 로컬 Git 폴더가 아니거나 hook이 `.git` 밖이면 `null`. 로컬 Git 폴더는 연결할 때 켠다 (PRD P6 기본 켬)
 - **ScanSummary**: `{"id", "scanned_at", "trigger", "commit_sha", "baseline", "risk_score", "summary"}`
-- **Job**: `{"scan_id", "repo_id", "trigger": "manual"|"hook", "status": "queued"|"running"|"done"|"failed", "stage": "collect"|"analyze"|"organize"|"save"|null, "error", "summary"}`
+- **Job**: `{"scan_id", "repo_id", "trigger": "manual"|"hook", "status": "queued"|"running"|"done"|"failed", "stage": "collect"|"analyze"|"organize"|"ai"|"save"|null, "error", "summary", "rule_id", "ai_progress"}` — B8: `stage == "ai"`는 ChatGPT 수정안 단계(연결했을 때만), `ai_progress`는 그때 `{"done", "total"}`(수정안 n/m), 아니면 null. `rule_id`는 수정안 작업이면 그 규칙, 검사면 null
 - SSE는 0.2초마다 **현재 상태**를 보낸다. 빠른 스캔에서는 중간 단계가 생략될 수 있으니 화면은 마지막으로 받은 `stage`만 보여 준다.
 - 작업 큐는 한 번에 1개만 돈다. 서버를 끄면(Ctrl+C) 돌던 스캔은 끝까지 마치고 대기 작업은 버린다.
 
