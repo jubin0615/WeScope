@@ -101,7 +101,8 @@ def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
     rule = group[0].rule_id
     ours = {f.fingerprint for f in group}
     others = {f.fingerprint for f in before if f.rule_id == rule} - ours        # 오탐 표시 등으로 그룹에서 뺀 것
-    remaining = [f for f in after if f.rule_id == rule and f.location.file in group_files
+    # 새로 만든 파일도 본다: 문제를 다른 파일로 옮기기만 한 수정안은 고친 게 아니다
+    remaining = [f for f in after if f.rule_id == rule and f.location.file in group_files | touched
                  and f.fingerprint not in others]
     known = {f.fingerprint for f in before}
     new = [f for f in after if f.location.file in touched and f.rule_id != rule and f.fingerprint not in known]

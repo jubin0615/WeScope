@@ -1,12 +1,13 @@
 """수정안 생성·검증 (AI.md §3): 가짜 ChatGPT로 끝까지. Semgrep은 꺼서 빠르게 (재검사는 Python 탐지기로 충분)."""
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from conftest import materialize
-from fake_chatgpt import FakeChatGPT, answer, replace_lines
+from fake_chatgpt import FakeChatGPT, answer, replace_lines, sent_lines
 from wescope.collector.snapshot import Target
 from wescope.llm.client import LLMError
 from wescope.scan import run_scan
@@ -164,6 +165,40 @@ def test_rescan_that_could_not_finish_is_not_verified(app, monkeypatch):
     weak = weak["config-weak-secret"]
     assert weak["verification"] == "partial" and weak["checks"]["rescan"] is False
     assert "재검사를 끝까지 하지 못했어요: config" in weak["checks"]["reasons"]
+
+
+def test_problem_moved_into_a_new_file_is_not_verified(app):
+    """비밀값을 새 settings.py로 옮기기만 한 수정안: 같은 규칙이 새 파일에서 잡히므로 고쳐진 게 아니다."""
+    root, _ = app
+
+    def move(p):
+        lines = sent_lines(p, "app.py")
+        moved = [code for code in lines.values() if code.startswith(("OPENAI_API_KEY =", "DATABASE_URL ="))]
+        app_py = replace_lines(p, "app.py", {"OPENAI_API_KEY =": "from settings import OPENAI_API_KEY",
+                                             "DATABASE_URL =": "from settings import DATABASE_URL"})
+        settings = f"--- /dev/null\n+++ b/settings.py\n@@ -0,0 +1,{len(moved)} @@\n" + "".join(f"+{c}\n" for c in moved)
+        return answer(app_py + settings)
+    fix = fixes(run_scan(Target("folder", str(root)), ai=FakeChatGPT(by_rule({"secret-hardcoded": move}))))
+    secret = fix["secret-hardcoded"]
+    assert secret["verification"] == "partial"
+    assert any(r.startswith("문제가 남아 있어요: settings.py:") for r in secret["checks"]["reasons"])
+
+
+@pytest.mark.parametrize("added, expected", [
+    ("+# 나중에\n", "partial"),
+    ("+.env*\n+*.pem\n+*.key\n+serviceAccountKey*.json\n+*.tfstate\n", "verified"),
+])
+def test_gitignore_fix_is_rechecked_with_git_context(app, added, expected):
+    """재검사 사본에는 .git이 없다. Git 저장소였다는 사실을 넘기지 않으면 .gitignore 검사가 아예 돌지 않는다."""
+    root, _ = app
+    (root / ".gitignore").write_text("__pycache__/\n", newline="\n")
+    for cmd in (["init", "-q"], ["add", "."], ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "x"]):
+        subprocess.run(["git", *cmd], cwd=root, check=True)
+    count = 1 + added.count("\n")
+    diff = f"--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,{count} @@\n __pycache__/\n{added}"
+    result = run_scan(Target("folder", str(root)), ai=FakeChatGPT(by_rule({"git-hygiene": lambda p: answer(diff)})))
+    fix = fixes(result)["git-hygiene"]
+    assert fix["verification"] == expected, fix["checks"]
 
 
 def test_same_code_is_answered_from_cache(app):
