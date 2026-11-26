@@ -9,7 +9,9 @@ description = "바이브코딩 웹앱을 내 PC에서 점검하는 로컬 보안
 requires-python = ">=3.11"
 license = "MIT"
 # semgrep: 입력값 주입(WS-05) 등 핵심 검사 도구라 함께 설치한다. 실행에 실패하면 semgrep Analyzer만 skipped로 표시된다.
-dependencies = ["pathspec>=0.12", "pyyaml>=6", "fastapi>=0.110", "uvicorn>=0.29", "semgrep>=1.185"]
+# tree-sitter: ChatGPT 수정안을 검증할 때 JS·TS 문법 검사 (사용자 PC에 Node가 없어도 되게)
+dependencies = ["pathspec>=0.12", "pyyaml>=6", "fastapi>=0.110", "uvicorn>=0.29", "semgrep>=1.185",
+                "tree-sitter>=0.23", "tree-sitter-javascript>=0.23", "tree-sitter-typescript>=0.23"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]

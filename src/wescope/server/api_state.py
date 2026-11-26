@@ -10,6 +10,8 @@ router = APIRouter(prefix="/api")
 
 class SettingsIn(BaseModel):
     theme: str | None = None
+    ai_level: str | None = None
+    ai_on_hook: bool | None = None
 
 
 @router.get("/state")
@@ -42,6 +44,6 @@ def update_settings(body: SettingsIn):
     """보낸 항목만 바뀐다."""
     changes = body.model_dump(exclude_none=True)
     for key, value in changes.items():
-        if value not in config.CHOICES[key]:
-            raise HTTPException(400, f"{key}는 {', '.join(config.CHOICES[key])} 중 하나예요")
+        if not config.is_allowed(value, config.CHOICES[key]):
+            raise HTTPException(400, f"{key}는 {', '.join(map(str, config.CHOICES[key]))} 중 하나예요")
     return config.save(changes)
