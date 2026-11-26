@@ -48,19 +48,50 @@ def suspicious(text: str) -> bool:
     return bool(_SUSPICIOUS.search(text))
 
 
-def diff_files(diff: str) -> tuple[set[str], set[str]]:
-    """(고치는 기존 파일, 새로 만드는 파일). 경로는 a/·b/ 접두어를 뗀 상대 경로."""
-    changed, created = set(), set()
-    old = None
-    for line in diff.splitlines():
-        if line.startswith("--- "):
-            old = line[4:].split("\t")[0].strip()
-        elif line.startswith("+++ ") and old is not None:
-            new = line[4:].split("\t")[0].strip()
-            if new != "/dev/null":
-                (created if old == "/dev/null" else changed).add(new.removeprefix("b/"))
-            old = None
-    return changed, created
+# 파일 삭제 말고도 이름·권한을 바꾸는 git 확장 머리줄. 이런 줄은 ---/+++ 없이도 파일을 바꾼다
+UNSUPPORTED = ("deleted file mode", "rename from", "rename to", "copy from", "copy to", "old mode", "new mode",
+               "similarity index", "dissimilarity index", "GIT binary patch", "Binary files")
+
+
+def _headers(lines: list[str]):
+    """(줄 번호, 옛 경로, 새 경로). 파일 머리줄은 '--- '·'+++ '·'@@' 세 줄이 이어진 곳이다
+    (hunk 안에서 '-- x'를 지우고 '++ y'를 넣는 줄과 구분). 경로는 a/·b/ 접두어를 뗀 상대 경로."""
+    for i in range(len(lines) - 2):
+        if lines[i].startswith("--- ") and lines[i + 1].startswith("+++ ") and lines[i + 2].startswith("@@"):
+            old, new = (line[4:].split("\t")[0].strip() for line in lines[i:i + 2])
+            yield i, old.removeprefix("a/"), new.removeprefix("b/")
+
+
+def diff_files(diff: str) -> tuple[set[str], set[str], set[str]]:
+    """(고치는 기존 파일, 새로 만드는 파일, 지우는 파일).
+    옛 이름과 새 이름이 다르면 둘 다 '고치는 파일'로 본다 (둘 다 묶음 안이어야 한다)."""
+    changed, created, deleted = set(), set(), set()
+    for _, old, new in _headers(diff.splitlines()):
+        if new == "/dev/null":
+            deleted.add(old)
+        elif old == "/dev/null":
+            created.add(new)
+        else:
+            changed |= {old, new}
+    return changed, created, deleted
+
+
+def with_git_headers(diff: str) -> str:
+    """파일 머리줄을 diff_files()가 읽은 경로로 다시 쓴다 (삭제·확장 머리줄은 verify가 먼저 거절한다).
+    - 'diff --git' 줄이 없으면 git apply --recount가 다음 파일의 '--- a/…'를 앞 hunk의 삭제 줄로 읽는다.
+    - 접두어 없는 경로는 git이 첫 칸을 떼어 다른 파일에 적용한다 (검사한 파일 ≠ 바뀐 파일).
+    - 모델이 쓴 'diff --git'·'index'·'new file mode' 줄은 버린다 (빠지거나 틀리면 적용이 실패한다)."""
+    lines = diff.splitlines()
+    heads = {i: (old, new) for i, old, new in _headers(lines)}
+    out = []
+    for i, line in enumerate(lines):
+        if i in heads:
+            old, new = heads[i]
+            out += [f"diff --git a/{new} b/{new}", *(["new file mode 100644"] if old == "/dev/null" else []),
+                    "--- " + ("/dev/null" if old == "/dev/null" else f"a/{new}"), f"+++ b/{new}"]
+        elif i - 1 not in heads and not line.startswith(("diff --git ", "index ", "new file mode ")):
+            out.append(line)        # i - 1이 머리줄이면 이 줄은 위에서 다시 쓴 '+++ '
+    return "\n".join(out) + "\n"
 
 
 def safe_path(path: str) -> bool:

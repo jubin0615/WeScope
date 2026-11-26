@@ -122,6 +122,50 @@ def test_fix_that_leaves_the_problem_is_partial_and_bad_diffs_fail(app):
     assert cors["verification"] == "failed" and "고칠 대상이 아닌 파일" in cors["checks"]["reasons"][0]
 
 
+def test_fix_touching_several_files_without_git_headers_applies(app):
+    """모델은 '--- a/ +++ b/ @@'만 낸다. --recount가 다음 파일 머리줄을 앞 hunk의 삭제 줄로 읽으면 안 된다."""
+    root, _ = app
+
+    def respond(p):
+        env = "--- /dev/null\n+++ b/.env.example\n@@ -0,0 +1 @@\n+SECRET_KEY=\n"
+        return answer(replace_lines(p, "app.py", {WEAK: FIXED_WEAK}) + env)
+    fix = fixes(run_scan(Target("folder", str(root)), ai=FakeChatGPT(by_rule({"config-weak-secret": respond}))))
+    assert fix["config-weak-secret"]["verification"] == "verified", fix["config-weak-secret"]["checks"]
+
+
+@pytest.mark.parametrize("extra", [
+    "diff --git a/models.py b/models.py\ndeleted file mode 100644\n--- a/models.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-x\n",
+    "diff --git a/models.py b/gone.py\nsimilarity index 100%\nrename from models.py\nrename to gone.py\n",
+])
+def test_deleting_or_renaming_files_is_rejected(app, extra):
+    root, _ = app
+
+    def respond(p):
+        return answer(replace_lines(p, "app.py", {WEAK: FIXED_WEAK}) + extra)
+    fix = fixes(run_scan(Target("folder", str(root)), ai=FakeChatGPT(by_rule({"config-weak-secret": respond}))))
+    weak = fix["config-weak-secret"]
+    assert weak["verification"] == "failed" and "지우거나" in weak["checks"]["reasons"][0]
+
+
+def test_rescan_that_could_not_finish_is_not_verified(app, monkeypatch):
+    """재검사에서 탐지기가 실패하면(예: Semgrep 시간 초과) 발견이 없어도 고쳐졌다고 할 수 없다."""
+    from wescope.analyzers.config import ConfigAnalyzer
+    root, _ = app
+    real, calls = ConfigAnalyzer.run, []
+
+    def dies_after_first_scan(self, ctx):
+        calls.append(1)
+        if len(calls) > 1:
+            raise TimeoutError
+        return real(self, ctx)
+    monkeypatch.setattr(ConfigAnalyzer, "run", dies_after_first_scan)
+    keep_weak = lambda p: answer(replace_lines(p, "app.py", {WEAK: WEAK + "  # ok"}))   # 고치지 않은 수정안
+    weak = fixes(run_scan(Target("folder", str(root)), ai=FakeChatGPT(by_rule({"config-weak-secret": keep_weak}))))
+    weak = weak["config-weak-secret"]
+    assert weak["verification"] == "partial" and weak["checks"]["rescan"] is False
+    assert "재검사를 끝까지 하지 못했어요: config" in weak["checks"]["reasons"]
+
+
 def test_same_code_is_answered_from_cache(app):
     root, _ = app
     first = FakeChatGPT(by_rule({"config-weak-secret": weak_secret_fix}))

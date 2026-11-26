@@ -2,7 +2,7 @@
 
 엔진은 저장소(store)·설정 파일을 모른다. 직전 결과·오탐 지문·꺼 둔 규칙은 scan_repo()가 store에서 읽어 넘긴다.
 ChatGPT 수정안은 compare 뒤·aggregate 앞(ARCHITECTURE §2의 8번). 검토(5번)·체인(6번)은 B8-3·B8-4.
-llm은 탐지기를 모르므로 수정안 재검사 함수(_rescan)를 여기서 넘긴다.
+llm은 탐지기를 모르므로 수정안 재검사 함수(_rescanner)를 여기서 넘긴다.
 """
 from wescope.analyzers.registry import analyzers
 from wescope.collector.context import collect
@@ -64,7 +64,7 @@ def run_scan(target: Target, *, previous: ScanResult | None = None, ignored=froz
         summary = None
         if ai is not None:
             progress("ai")
-            summary = fixer.auto_fixes(findings, ctx, ai, _rescan, level=ai_level, progress=progress,
+            summary = fixer.auto_fixes(findings, ctx, ai, _rescanner(statuses), level=ai_level, progress=progress,
                                        skip=lambda f: f.fingerprint in ignored or f.rule_id in disabled)
         result = aggregate(findings, statuses, ctx, ignored=ignored, disabled=disabled, trigger=trigger,
                            repo=target.repo_id, baseline_scan=previous.scan_id if previous else None, scan_id=scan_id)
@@ -87,15 +87,21 @@ def fix_group(repo_id: str, scan_id: str, rule_id: str, *, retry=False, progress
     progress("ai", done=0, total=1)
     with collect(Target(repo["kind"], repo["location"], repo["branch"], tuple(repo["excludes"]))) as ctx:
         run_all(ctx, [a for a in analyzers() if a.id == "secrets"])   # 보내기 전에 가릴 비밀값을 다시 찾는다
-        group[0].fix = fixer.make_fix(fixer.Session(client), ctx, group, result.findings, _rescan, rejected=rejected)
+        group[0].fix = fixer.make_fix(fixer.Session(client), ctx, group, result.findings, _rescanner(result.analyzers),
+                                      rejected=rejected)
     progress("save")
     with scan_lock():
         results.save(result)
     return result
 
 
-def _rescan(folder) -> list:
-    """수정안을 적용한 사본을 같은 탐지기로 다시 검사한다 (llm.verify가 부른다)."""
-    with collect(Target("folder", str(folder))) as ctx:
-        hits, _ = run_all(ctx, analyzers())
-        return normalize(hits, ctx)
+def _rescanner(statuses):
+    """수정안을 적용한 사본을 같은 탐지기로 다시 검사하는 함수 (llm.verify가 부른다).
+    원래 검사에서 끝까지 돈(ok) 탐지기가 이번에 실패·일부만 돌면 그 id를 함께 돌려준다."""
+    finished = {s.id for s in statuses if s.status == "ok"}
+
+    def rescan(folder):
+        with collect(Target("folder", str(folder))) as ctx:
+            hits, after = run_all(ctx, analyzers())
+            return normalize(hits, ctx), sorted(s.id for s in after if s.id in finished and s.status != "ok")
+    return rescan

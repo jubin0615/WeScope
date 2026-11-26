@@ -13,7 +13,7 @@ import tree_sitter_javascript
 import tree_sitter_typescript
 from tree_sitter import Language, Parser
 
-from wescope.llm.guards import diff_files, safe_path
+from wescope.llm.guards import UNSUPPORTED, diff_files, safe_path, with_git_headers
 
 _GRAMMARS = {".js": tree_sitter_javascript.language, ".jsx": tree_sitter_javascript.language,
              ".mjs": tree_sitter_javascript.language, ".cjs": tree_sitter_javascript.language,
@@ -46,12 +46,16 @@ def syntax_error(path: Path) -> str | None:
 
 def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
     """→ {"status": verified|partial|failed, "apply", "syntax", "rescan", "reasons": [...]}.
-    group: 고치려는 발견들, before: 이번 검사의 전체 발견, rescan(folder) → 그 폴더의 발견 목록."""
+    group: 고치려는 발견들, before: 이번 검사의 전체 발견,
+    rescan(folder) → (그 폴더의 발견 목록, 원래 검사에서는 끝났는데 이번엔 끝까지 못 돈 탐지기 id 목록)."""
     checks = {"status": "failed", "apply": False, "syntax": None, "rescan": None, "reasons": []}
     reasons = checks["reasons"]
     group_files = {f.location.file for f in group}
-    changed, created = diff_files(diff)
+    changed, created, deleted = diff_files(diff)
     touched = changed | created
+    if deleted or any(line.startswith(UNSUPPORTED) for line in diff.splitlines()):
+        reasons.append("파일을 지우거나 이름·권한을 바꾸는 수정안은 받지 않아요")
+        return checks
     if not touched:
         reasons.append("diff에서 바꾸는 파일을 찾지 못했어요 (unified diff 형식이 아님)")
         return checks
@@ -71,7 +75,7 @@ def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
             # 보낸 코드는 LF였다. Windows 체크아웃(CRLF)에 LF diff를 적용하면 실패하므로 사본만 LF로 맞춘다
             file.write_bytes(file.read_bytes().replace(b"\r\n", b"\n"))
         patch = Path(work) / "fix.diff"
-        patch.write_text(redactor.reveal(diff).rstrip("\n") + "\n", encoding="utf-8", newline="\n")
+        patch.write_text(with_git_headers(redactor.reveal(diff)), encoding="utf-8", newline="\n")
         done = subprocess.run(["git", "apply", "--recount", "--whitespace=nowarn", str(patch)], cwd=copy,
                               capture_output=True)
         if done.returncode:
@@ -88,7 +92,7 @@ def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
             return checks
 
         try:
-            after = rescan(copy)
+            after, incomplete = rescan(copy)
         except Exception as error:   # 재검사가 안 되면 적용·문법까지만 확인된 것
             reasons.append(f"재검사를 하지 못했어요: {type(error).__name__}")
             checks["status"] = "partial"
@@ -103,6 +107,8 @@ def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
     new = [f for f in after if f.location.file in touched and f.rule_id != rule and f.fingerprint not in known]
     reasons += [f"문제가 남아 있어요: {f.location.file}:{f.location.line}" for f in remaining]
     reasons += [f"새 위험 후보가 생겼어요: {f.rule_id} {f.location.file}:{f.location.line}" for f in new]
-    checks["rescan"] = not remaining and not new
+    if incomplete:     # 탐지기가 끝까지 못 돌았으면 "발견 없음"이 "고쳐짐"을 뜻하지 않는다
+        reasons.append("재검사를 끝까지 하지 못했어요: " + ", ".join(incomplete))
+    checks["rescan"] = not remaining and not new and not incomplete
     checks["status"] = "verified" if checks["rescan"] else "partial"
     return checks
