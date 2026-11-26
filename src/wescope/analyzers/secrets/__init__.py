@@ -46,11 +46,15 @@ class SecretsAnalyzer(Analyzer):
     def _git_hygiene(self, ctx):
         if not ctx.source.get("git"):
             return []
-        text = ctx.text(".gitignore") if ".gitignore" in ctx.files else None
-        if text is None:
-            return [RawHit("git-hygiene", ".gitignore", 0, evidence=".gitignore 파일이 없어요", extra={"kind": "missing"})]
-        spec = pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
-        missing = [pattern for pattern, sample in _GITIGNORE_SAMPLES.items() if not spec.match_file(sample)]
+        if ctx.git_ignores:   # 저장소의 하위 폴더를 연결: 루트 쪽 .gitignore까지 Git이 판정한다
+            covered = ctx.git_ignores(list(_GITIGNORE_SAMPLES.values()))
+            missing = [pattern for pattern, sample in _GITIGNORE_SAMPLES.items() if sample not in covered]
+        else:
+            text = ctx.text(".gitignore") if ".gitignore" in ctx.files else None
+            if text is None:
+                return [RawHit("git-hygiene", ".gitignore", 0, evidence=".gitignore 파일이 없어요", extra={"kind": "missing"})]
+            spec = pathspec.PathSpec.from_lines("gitwildmatch", text.splitlines())
+            missing = [pattern for pattern, sample in _GITIGNORE_SAMPLES.items() if not spec.match_file(sample)]
         if not missing:
             return []
         return [RawHit("git-hygiene", ".gitignore", 0, evidence="등록되지 않은 패턴: " + ", ".join(missing),

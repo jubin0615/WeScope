@@ -755,15 +755,15 @@ events.addEventListener("done", async ({ data }) => {
 git commit
    │
    ▼
-.git/hooks/post-commit   (프로젝트 추가 때 설치, 설정 창에서 끌 수 있음. 기존 hook 있으면 뒤에 덧붙임)
-   │  "<설치된 python>" -m wescope.hook --repo <path> --commit <sha> &
+.git/hooks/post-commit   (프로젝트 추가 때 설치, 설정 창에서 끌 수 있음. 기존 hook은 그대로 두고 shebang 다음 줄에 넣음)
+   │  '<설치된 python>' -P -m wescope.hook --repo <repo-id> --commit <sha> &
    │  ↑ 사용자 명령이 아닌 내부 모듈 호출, 백그라운드라 커밋이 느려지지 않음
    ▼
 ~/.wescope/server.json 의 서버가 살아 있나?
    ├─ 예 → POST /api/hook-trigger (티켓 포함) → 작업 큐 → 스캔 (현재 파일 기준)
    │        (ChatGPT는 설정의 "자동 검사에서 ChatGPT 사용"을 켰을 때만)
    │        → 열려 있는 대시보드: 목록·요약 줄만 조용히 갱신 (토스트·알림·배너 없음)
-   └─ 아니오 → wescope.hook이 ChatGPT 없이 직접 스캔 → 결과·이력 저장
+   └─ 아니오 → 3초 디바운스(더 새 커밋이 오면 그쪽이 검사) → scan.lock → ChatGPT 없이 직접 스캔 → 결과·이력 저장
             → 다음에 wescope로 열면 최신 결과가 보임
 ```
 

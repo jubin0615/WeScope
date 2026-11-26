@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tarfile
 from dataclasses import dataclass
+from typing import Callable
 from pathlib import Path
 
 import pathspec
@@ -44,6 +45,7 @@ class Snapshot:
     git_status: dict[str, str] | None   # committed / untracked / ignored, Git이 아니면 None
     skipped: dict[str, str]
     excluded: list[str]                 # 제외 패턴에 걸린 파일, 폴더는 '경로/' (비교 단계가 '해결'로 오인하지 않게)
+    git_ignores: Callable[[list[str]], set[str]] | None = None   # 하위 폴더 연결: 위쪽 .gitignore까지 합친 판정
 
 
 def git(*args: str, cwd: Path | None = None) -> str:
@@ -62,7 +64,10 @@ def take(target: Target, dest: Path) -> Snapshot:
     if status is not None:
         source["commit"] = _try_git("rev-parse", "HEAD", cwd=src)
         source["branch"] = _try_git("rev-parse", "--abbrev-ref", "HEAD", cwd=src)
-    return _copy(src, dest, source, status, target.excludes)
+    snapshot = _copy(src, dest, source, status, target.excludes)
+    if status is not None:
+        snapshot.git_ignores = _outer_gitignore(src)
+    return snapshot
 
 
 def _github(target: Target, dest: Path) -> Snapshot:
@@ -139,6 +144,24 @@ def _try_git(*args, cwd) -> str | None:
         return git(*args, cwd=cwd)
     except subprocess.CalledProcessError:
         return None   # 커밋이 하나도 없는 저장소
+
+
+def _outer_gitignore(src: Path):
+    """저장소의 하위 폴더를 연결했고 그 위쪽에 .gitignore가 있으면, 경로 목록 중 Git이 무시할 경로를 돌려주는 함수.
+    스냅샷에는 위쪽 .gitignore가 없어서 분석기가 원본 Git에 물어야 한다. 아니면 None (스냅샷의 .gitignore로 충분)."""
+    here = src.resolve()
+    top = Path(git("rev-parse", "--show-toplevel", cwd=src)).resolve()
+    if top == here or top not in here.parents:
+        return None
+    if not any((folder / ".gitignore").is_file() for folder in here.parents if folder == top or top in folder.parents):
+        return None
+
+    def ignores(paths: list[str]) -> set[str]:
+        # 이 PC의 전역 제외 파일은 빼고 저장소에 들어 있는 규칙만 본다 (다른 사람 PC에서는 그 파일이 없다)
+        done = subprocess.run(["git", "-c", "core.excludesFile=", "check-ignore", "--no-index", "--", *paths],
+                              cwd=here, capture_output=True)   # 하나도 무시되지 않으면 종료 코드 1
+        return set(done.stdout.decode("utf-8", "replace").splitlines())
+    return ignores
 
 
 def _git_status(src: Path):

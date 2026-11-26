@@ -19,7 +19,7 @@ const EMPTY = {
 };
 
 const state = {
-  repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null,
+  repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null, latestScan: null,
   names: { ws: {}, owasp: {} },   // GET /api/catalog: 코드값 → 이름. 못 받으면 코드만 보인다
   ...loadView(),
 };
@@ -251,6 +251,8 @@ async function boot() {
   try {
     const info = await api("/api/state");
     state.offline = false;
+    state.latestScan = info.latest_scan;
+    api("/api/settings").then((settings) => window.setTheme(settings.theme), () => {});
     const names = await api("/api/catalog").catch(() => null);
     if (names) state.names = { ws: Object.fromEntries(names.ws.map((w) => [w.code, w.name_ko])),
       owasp: Object.fromEntries(names.owasp.map((o) => [o.code, o.name])) };
@@ -265,6 +267,23 @@ async function boot() {
   }
 }
 
+// 다른 곳(커밋 자동 검사)에서 시작·끝난 검사를 조용히 반영한다. 토스트·알림 없음 (PRD P6)
+async function poll() {
+  if (state.offline) return;
+  try {
+    const info = await api("/api/state");
+    if (info.running && !state.jobs[info.running.repo_id]) watch(info.running);
+    if (info.latest_scan === state.latestScan) return;
+    state.latestScan = info.latest_scan;
+    state.repos = await api("/api/repos");
+    await loadResult();
+    render();
+  } catch (err) {
+    if (err.offline) goOffline();
+  }
+}
+
+setInterval(poll, 5000);
 setInterval(() => state.result && !jobHere() && renderTop(), 60000);   // "n분 전" 갱신
 document.addEventListener("click", (event) => {   // 펼친 메뉴(프로젝트·보고서) 바깥을 누르면 닫는다
   for (const menu of document.querySelectorAll("details.popover[open]")) if (!menu.contains(event.target)) menu.open = false;

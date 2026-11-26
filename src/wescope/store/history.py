@@ -147,9 +147,11 @@ def last_scanned_repo() -> str | None:
         return row["repo_id"] if row else None
 
 
-def latest_scan_id(repo_id: str) -> str | None:
+def latest_scan_id(repo_id: str | None = None) -> str | None:
+    """저장소의 마지막 검사. repo_id가 없으면 모든 저장소 중 마지막 (열린 대시보드가 다른 트리거의 검사를 알아채는 근거)."""
     with _db() as db:
-        row = db.execute("SELECT id FROM scans WHERE repo_id = ? ORDER BY rowid DESC LIMIT 1", (repo_id,)).fetchone()
+        row = db.execute("SELECT id FROM scans WHERE ? IS NULL OR repo_id = ? ORDER BY rowid DESC LIMIT 1",
+                         (repo_id, repo_id)).fetchone()
         return row["id"] if row else None
 
 
@@ -168,6 +170,14 @@ def ignore(repo_id: str, fingerprint: str, reason: str = ""):
 def unignore(repo_id: str, fingerprint: str):
     with _db() as db:
         db.execute("DELETE FROM ignores WHERE repo_id = ? AND fingerprint = ?", (repo_id, fingerprint))
+
+
+def ignores(repo_id: str) -> list[dict]:
+    """오탐 표시 목록: 지문·이유·시각 (표시한 순서)."""
+    with _db() as db:
+        rows = db.execute("SELECT fingerprint, reason, created_at FROM ignores WHERE repo_id = ? ORDER BY created_at, rowid",
+                          (repo_id,))
+        return [dict(r) for r in rows]
 
 
 def ignored(repo_id: str) -> frozenset[str]:

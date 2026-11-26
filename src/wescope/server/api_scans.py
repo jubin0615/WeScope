@@ -26,6 +26,13 @@ def start_scan(body: ScanIn, request: Request):
     return {"scan_id": request.app.state.jobs.submit(body.repo_id).scan_id}
 
 
+@router.post("/hook-trigger", status_code=202)
+def hook_trigger(body: ScanIn, request: Request):
+    """post-commit hook(wescope.hook)이 부른다. 열린 대시보드는 /api/state의 running·latest_scan으로 조용히 알아챈다."""
+    get_or_404(body.repo_id)
+    return {"scan_id": request.app.state.jobs.submit(body.repo_id, "hook").scan_id}
+
+
 def load_result(scan_id: str, request: Request):
     repo_id = history.repo_of_scan(scan_id)
     if repo_id is None:
