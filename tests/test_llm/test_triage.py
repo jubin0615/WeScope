@@ -1,6 +1,8 @@
 """의심 발견 확인 (AI.md §4, llm/triage.py): 가짜 ChatGPT로. vuln_flask의 '없어 보인다' 발견은
 authz-idor(GET /orders), authz-admin-route(DELETE /admin/users), authz-no-auth-write(POST /comments) 세 개다."""
+import ast
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -73,6 +75,32 @@ def test_functions_the_handler_calls_are_sent(app):
     admin = next(r for r in fake.requests if r["task"] == "triage" and r["finding"]["rule_id"] == ADMIN)
     sent = {f["path"]: f["content"] for f in admin["files"]}
     assert "perms.py" in sent and "def ensure_manager" in sent["perms.py"]
+
+
+class Files:
+    """_callees가 쓰는 만큼만 흉내 낸 ScanContext."""
+
+    def __init__(self, texts):
+        self.texts, self.files = texts, set(texts)
+
+    def python_ast(self, path):
+        return ast.parse(self.texts[path]) if path in self.texts else None
+
+
+PERMS = "def ensure_manager():\n    pass\n"
+
+
+@pytest.mark.parametrize("statement, others, expected", [
+    ("from .perms import ensure_manager", {"perms.py": PERMS}, {}),                      # 상대: 루트로 넘어가지 않는다
+    ("from .perms import ensure_manager", {"pkg/perms.py": PERMS}, {"pkg/perms.py": [1]}),
+    ("from perms import ensure_manager", {"perms.py": PERMS}, {"perms.py": [1]}),         # 절대: 루트 기준
+    ("from perms import ensure_manager", {"pkg/perms.py": PERMS}, {"pkg/perms.py": [1]}),  # 파일을 직접 실행하는 앱
+    ("from perms import ensure_manager", {"perms.py": PERMS, "pkg/perms.py": PERMS}, {}),  # 실행 방식에 따라 달라 모른다
+])
+def test_callee_files_follow_python_import_rules(statement, others, expected):
+    handler = f"{statement}\n\ndef delete_user():\n    ensure_manager()\n"
+    finding = SimpleNamespace(location=SimpleNamespace(file="pkg/app.py", line=4))
+    assert triage._callees(Files({"pkg/app.py": handler, **others}), finding) == expected
 
 
 def test_protected_with_real_evidence_is_only_a_suggestion(app):

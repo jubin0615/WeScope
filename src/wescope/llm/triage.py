@@ -64,9 +64,14 @@ def _callees(ctx, finding) -> dict[str, list[int]]:
         names = {alias.asname or alias.name: alias.name for alias in node.names}
         wanted = {names[n] for n in called & names.keys()}
         module = node.module.replace(".", "/") + ".py"
-        file = next((c for c in [(here / module).as_posix(), module] if c in ctx.files), None)   # 같은 폴더, 프로젝트 루트
-        if not wanted or file is None:
+        sibling = (here / module).as_posix()
+        # 상대 import(.)는 그 패키지 안만. 절대 import는 루트 기준(패키지로 실행)과 같은 폴더(파일을 직접 실행)가
+        # 실행 방식에 따라 갈린다: 한쪽에만 있으면 그것, 둘 다 있으면 어느 쪽인지 모르므로 보내지 않는다
+        # (엉뚱한 함수를 보호 근거로 보내면 protected가 잘못 나올 수 있다. 모르면 unclear가 낫다)
+        found_at = {c for c in ([sibling] if node.level else [module, sibling]) if c in ctx.files}
+        if not wanted or len(found_at) != 1:
             continue
+        file = found_at.pop()
         for item in getattr(ctx.python_ast(file), "body", []):
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name in wanted:
                 found.setdefault(file, []).append(item.lineno)
