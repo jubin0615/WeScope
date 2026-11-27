@@ -216,7 +216,7 @@ def test_usage_limit_stops_ai_but_keeps_static_results(app):
     root, _ = app
     static = run_scan(Target("folder", str(root)))
     limit = lambda p: LLMError("ChatGPT 사용량 한도에 도달했어요", "limit")
-    fake = FakeChatGPT(limit, triage=limit)
+    fake = FakeChatGPT(limit, triage=limit, review=limit)
     result = run_scan(Target("folder", str(root)), ai=fake)
     assert len(fake.requests) == 1 and result.ai["error"]["kind"] == "limit"
     assert not fixes(result)

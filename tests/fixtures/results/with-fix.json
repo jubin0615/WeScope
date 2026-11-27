@@ -226,6 +226,47 @@
   ],
   "findings": [
     {
+      "rule_id": "ai-price-tampering",
+      "category": "WS-07",
+      "cwe": "CWE-602",
+      "owasp": "A06:2025",
+      "severity": "CRITICAL",
+      "confidence": "Potential",
+      "title_ko": "금액·수량을 사용자가 보낸 값으로 계산하고 있어 보여요",
+      "tech_name_ko": "가격 변조",
+      "why_ko": "checkout은 요청 본문의 unit_price를 그대로 곱해 결제 금액을 정해요. 상품 가격은 다시 확인하지 않아요.",
+      "fix_ko": "unit_price를 받지 말고 product.price로 다시 계산하세요.",
+      "avoid_ko": "프론트엔드에서 계산한 합계를 그대로 결제 금액으로 쓰지 마세요.",
+      "fix_example": "# 수정 전\ntotal = request.json[\"price\"] * qty\n# 수정 후\ntotal = Product.query.get_or_404(product_id).price * qty\n",
+      "limitations_ko": "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요.",
+      "location": {
+        "file": "app.py",
+        "line": 152,
+        "end_line": 152,
+        "route": null
+      },
+      "evidence": "total = float(request.json[\"unit_price\"]) * quantity",
+      "fingerprint": "a1c3e5f7b9d0e2a4",
+      "id": "F-024",
+      "owasp_ai": [],
+      "source": "ai",
+      "confidence_source": "ai",
+      "scope": null,
+      "extra": {
+        "vuln_type": "price-tampering",
+        "attack_scenario_ko": "로그인한 사용자가 unit_price를 0.01로 바꿔 보내면 비싼 상품을 거의 공짜로 결제해요.",
+        "identity": "def checkout():",
+        "cache_key": "5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d"
+      },
+      "change": "new",
+      "introduced_in": null,
+      "status": "open",
+      "triage": null,
+      "fix": null,
+      "chain": null,
+      "related": []
+    },
+    {
       "rule_id": "config-weak-secret",
       "category": "WS-06",
       "cwe": "CWE-321",
@@ -427,7 +468,9 @@
       "source": "engine",
       "confidence_source": "flow",
       "scope": null,
-      "extra": {},
+      "extra": {
+        "ai_also_ko": "ChatGPT도 같은 문제를 지적했어요: 검색어에 SQL 조각을 넣으면 다른 사용자의 주문까지 조회할 수 있어요."
+      },
       "change": "new",
       "introduced_in": null,
       "status": "open",
@@ -1169,13 +1212,13 @@
   ],
   "summary": {
     "severity": {
-      "CRITICAL": 0,
+      "CRITICAL": 1,
       "HIGH": 15,
       "MEDIUM": 7,
       "LOW": 0,
       "INFO": 1
     },
-    "new": 23,
+    "new": 24,
     "fixed": 0,
     "dismissed": 0,
     "risk_score": 100,
@@ -1185,8 +1228,15 @@
   "ai": {
     "level": "deep",
     "model": "gpt-5",
-    "requests": 12,
+    "requests": 16,
     "cache_hits": 0,
+    "review": {
+      "targets": 4,
+      "found": 1,
+      "merged": 1,
+      "discarded": 1,
+      "remaining": 0
+    },
     "triage": {
       "confirmed": 1,
       "protected": 1,
@@ -1202,6 +1252,31 @@
     "remaining_groups": 7,
     "error": null
   },
-  "ai_coverage": [],
+  "ai_coverage": [
+    {
+      "code": "AI-AUTHZ",
+      "state": "reviewed",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "AI-PAYMENT",
+      "state": "reviewed",
+      "findings": 1,
+      "notes": []
+    },
+    {
+      "code": "AI-FLOW",
+      "state": "not_applicable",
+      "findings": 0,
+      "notes": []
+    },
+    {
+      "code": "AI-LANG",
+      "state": "not_applicable",
+      "findings": 0,
+      "notes": []
+    }
+  ],
   "schema_version": 1
 }

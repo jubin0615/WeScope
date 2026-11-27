@@ -4,6 +4,7 @@
 shortcut: 다른 파일의 연관 정의(import 그래프 1단계)는 아직 보내지 않는다. 수정안이 다른 파일을 몰라 틀리면 추가
 """
 import ast
+from pathlib import PurePosixPath
 
 from wescope.llm.guards import map_strings, suspicious
 
@@ -19,16 +20,51 @@ def numbered(lines: list[str], start: int, end: int) -> str:
     return "\n".join(f"{n:>5}| {lines[n - 1]}" for n in range(max(start, 1), min(end, len(lines)) + 1))
 
 
-def span(ctx, path: str, line: int) -> tuple[int, int]:
-    """발견 줄을 감싸는 가장 안쪽 함수(Python), 모르면 앞뒤 40줄."""
+def _innermost(ctx, path: str, line: int):
+    """line을 감싸는 가장 안쪽 함수 노드 (Python만, 데코레이터 포함). 없으면 None."""
     tree = ctx.python_ast(path) if path.endswith(".py") else None
     best = None
     for node in ast.walk(tree) if tree else ():
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             start = min([node.lineno, *(d.lineno for d in node.decorator_list)])
             if start <= line <= node.end_lineno and (best is None or start >= best[0]):
-                best = (start, node.end_lineno)
-    return best or (line - _AROUND, line + _AROUND)
+                best = (start, node)
+    return best[1] if best else None
+
+
+def span(ctx, path: str, line: int) -> tuple[int, int]:
+    """발견 줄을 감싸는 가장 안쪽 함수(Python), 모르면 앞뒤 40줄."""
+    node = _innermost(ctx, path, line)
+    if node is None:
+        return line - _AROUND, line + _AROUND
+    return min([node.lineno, *(d.lineno for d in node.decorator_list)]), node.end_lineno
+
+
+def enclosing_def(ctx, path: str, line: int) -> str | None:
+    """line을 감싸는 가장 안쪽 함수의 def 줄 코드 (Python만). 같은 함수 안의 발견을 알아보는 열쇠로 쓴다."""
+    node = _innermost(ctx, path, line)
+    lines = (ctx.text(path) or "").splitlines()
+    return lines[node.lineno - 1].strip() if node is not None and node.lineno <= len(lines) else None
+
+
+def local_imports(ctx, path: str) -> dict[str, dict[str, str]]:
+    """Python 파일이 `from 모듈 import 이름`으로 가져오는 이 프로젝트 파일 → {쓰는 이름: 원래 이름}.
+    상대 import(.)는 그 패키지 안만. 절대 import는 루트 기준(패키지로 실행)과 같은 폴더(파일을 직접 실행)가
+    실행 방식에 따라 갈린다: 한쪽에만 있으면 그것, 둘 다 있으면 어느 쪽인지 모르므로 넣지 않는다
+    (엉뚱한 파일을 맥락으로 보내면 판정이 틀린다. 모르면 빼는 게 낫다).
+    shortcut: `from 모듈 import` 한 단계만. `import 모듈`·패키지 __init__·JS/TS import는 따라가지 않는다."""
+    tree = ctx.python_ast(path) if path.endswith(".py") else None
+    here = PurePosixPath(path).parent
+    found: dict[str, dict[str, str]] = {}
+    for node in getattr(tree, "body", []):
+        if not isinstance(node, ast.ImportFrom) or not node.module or node.level > 1:
+            continue
+        module = node.module.replace(".", "/") + ".py"
+        sibling = (here / module).as_posix()
+        at = {c for c in ([sibling] if node.level else [module, sibling]) if c in ctx.files}
+        if len(at) == 1:
+            found.setdefault(at.pop(), {}).update({a.asname or a.name: a.name for a in node.names})
+    return found
 
 
 def excerpt(ctx, path: str, lines: list[str], hit_lines: list[int]) -> str:

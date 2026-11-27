@@ -24,7 +24,7 @@ def rules() -> dict[str, dict]:
     def add(rule_id, meta, origin):
         if rule_id in found:
             raise ValueError(f"규칙 메타가 두 곳에 있어요: {rule_id} ({origin})")
-        found[rule_id] = {"id": rule_id, "owasp_ai": [], **{k: meta.get(k) for k in RULE_FIELDS}}
+        found[rule_id] = {"id": rule_id, "owasp_ai": list(meta.get("owasp_ai") or []), **{k: meta.get(k) for k in RULE_FIELDS}}
 
     for path in sorted((RULES_DIR / "catalog").glob("*.yml")):
         data = _load(path)

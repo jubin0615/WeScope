@@ -4,17 +4,21 @@
 class FakeChatGPT:
     model = "fake-gpt"
 
-    def __init__(self, respond, triage=None):
+    def __init__(self, respond, triage=None, review=None):
         """respond(payload) → 수정안 응답 dict, 또는 던질 예외. 같은 묶음의 두 번째 요청이면 payload에 previous_attempt가 있다.
         triage(payload) → 의심 확인 응답. 없으면 늘 unclear (수정안만 보는 테스트가 의심 확인을 신경 쓰지 않게).
-        respond가 의심 확인 요청까지 받아야 하면 triage=respond."""
+        respond가 의심 확인 요청까지 받아야 하면 triage=respond.
+        review(payload) → 보완 탐지 응답. 없으면 늘 찾은 것 없음."""
         self.respond = respond
         self.triage = triage or (lambda payload: verdict("unclear"))
+        self.review = review or (lambda payload: {"findings": []})
         self.requests: list[dict] = []
+        self.efforts: dict[str, set[str]] = {}       # 작업(task) → 받은 추론 강도
 
-    def ask(self, instructions: str, payload: dict) -> dict:
+    def ask(self, instructions: str, payload: dict, effort: str) -> dict:
         self.requests.append(payload)
-        answer = (self.triage if payload["task"] == "triage" else self.respond)(payload)
+        self.efforts.setdefault(payload["task"], set()).add(effort)
+        answer = {"triage": self.triage, "review": self.review}.get(payload["task"], self.respond)(payload)
         if isinstance(answer, Exception):
             raise answer
         return answer

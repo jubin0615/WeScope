@@ -47,7 +47,7 @@ def test_rescan_sample_covers_change_states():
 
 FIX = ["summary_ko", "diff", "files", "behavior_change_ko", "follow_ups", "new_dependencies", "test_hint_ko", "confidence",
        "verification", "checks", "attempts", "cache_key", "instruction_suspect"]
-AI = ["level", "model", "requests", "cache_hits", "triage", "fixes", "budget_exceeded", "remaining_groups", "error"]
+AI = ["level", "model", "requests", "cache_hits", "review", "triage", "fixes", "budget_exceeded", "remaining_groups", "error"]
 TRIAGE = ["verdict", "suggested", "reason_ko", "impact_ko", "evidence", "note_ko", "instruction_suspect", "cache_key"]
 
 
@@ -73,3 +73,15 @@ def test_triage_sample_shape():
         assert list(f["triage"]) == TRIAGE and f["confidence_source"] in ("absence", "ai_confirmed")
         assert (f["triage"]["suggested"] == "dismiss") == (f["triage"]["verdict"] == "protected")
         assert (f["confidence_source"] == "ai_confirmed") == (f["triage"]["verdict"] == "confirmed")
+
+
+def test_review_sample_shape():
+    """B8-3b: 보완 탐지 요약(ai.review)·AI 발견·검사 범위의 AI 행 (AI.md §5·§9). 실제 출력은 tests/test_llm/test_review.py."""
+    from wescope.llm import review
+    data = json.loads((Path(__file__).parent / "fixtures/results/with-fix.json").read_text("utf-8"))
+    assert list(data["ai"]["review"]) == ["targets", "found", "merged", "discarded", "remaining"]
+    ai = [f for f in data["findings"] if f["source"] == "ai"]
+    assert ai and all(f["rule_id"].startswith("ai-") and f["confidence"] == "Potential"
+                      and f["confidence_source"] == "ai" and f["extra"]["attack_scenario_ko"] for f in ai)
+    assert [r["code"] for r in data["ai_coverage"]] == list(review.COVERAGE)
+    assert {r["state"] for r in data["ai_coverage"]} <= {"reviewed", "partial", "not_reviewed", "not_applicable"}

@@ -121,11 +121,12 @@ def test_register_then_login_then_ask(server, openai):
         assert b"access-1" not in (home() / "auth.json").read_bytes()
 
     client = connected()
-    assert client.ask("지시", {"x": 1}) == {"answer": 1} and client.model == "gpt-test"
+    assert client.ask("지시", {"x": 1}, "high") == {"answer": 1} and client.model == "gpt-test"
     method, url, headers, data = openai.calls[-1]
     body = json.loads(data)
     assert url.endswith("/responses") and body["store"] is False and body["stream"] is True
     assert body["model"] == "gpt-test" and json.loads(body["input"][0]["content"]) == {"x": 1}
+    assert body["reasoning"] == {"effort": "high"}                       # 작업마다 정한 추론 강도
 
     assert tab.post("/api/auth/logout").status_code == 204
     assert tab.get("/api/auth").json()["state"] == "login" and connected() is None
@@ -159,12 +160,12 @@ def test_rejected_token_is_refreshed_once_then_needs_login(server, openai):
     answers = iter([Response(401, {})])
     ok = openai.responses
     openai.responses = lambda body: next(answers, None) or ok(body)
-    assert connected().ask("지시", {}) == {"answer": 1}                 # 갱신한 토큰으로 성공
+    assert connected().ask("지시", {}, "low") == {"answer": 1}                 # 갱신한 토큰으로 성공
     assert auth.load()["session"]["access_token"] == "access-2"
 
     openai.responses = lambda body: Response(401, {})
     with pytest.raises(LLMError) as error:
-        connected().ask("지시", {})
+        connected().ask("지시", {}, "low")
     assert error.value.kind == "login"
     assert tab.get("/api/auth").json()["state"] == "login"              # 상단 바가 [ChatGPT 연결] 버튼으로
 
@@ -200,7 +201,7 @@ def test_http_errors_map_to_kinds(server, openai, status, kind):
     log_in(server, openai)
     openai.responses = lambda body: Response(status, {})
     with pytest.raises(LLMError) as error:
-        connected().ask("지시", {})
+        connected().ask("지시", {}, "low")
     assert error.value.kind == kind
 
 

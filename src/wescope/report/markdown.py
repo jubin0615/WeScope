@@ -39,7 +39,8 @@ def render(result) -> str:
     for items in sorted(groups.values(), key=lambda g: (ws_order.index(g[0].category), SEVERITIES.index(g[0].severity))):
         f = items[0]
         owasp = f"OWASP {f.owasp} {owasp_names[f.owasp]}" if f.owasp else "OWASP Top 10 범위 밖"
-        out += [f"### [{f.severity}] {f.tech_name_ko} — {len(items)}곳", "",
+        ai = " · AI" if f.source == "ai" else ""     # 화면의 AI 태그 대신 (ChatGPT 보완 탐지로 찾은 발견)
+        out += [f"### [{f.severity}] {f.tech_name_ko}{ai} — {len(items)}곳", "",
                 f"- 분류: {f.category} {ws_names[f.category]} · {owasp} · {f.cwe or 'CWE 없음'}", "",
                 f"**무엇이** {f.title_ko}", "", f"**왜 위험한가** {f.why_ko}", "", f"**어떻게 고치나** {f.fix_ko}",
                 "", f"**하지 말 것** {f.avoid_ko}", "", "**위치**", ""]

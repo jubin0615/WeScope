@@ -97,8 +97,9 @@ class ChatGPT:
                     return model["slug"]
         raise LLMError("이 계정에서 쓸 수 있는 모델이 없어요", "plan")
 
-    def ask(self, instructions: str, payload: dict) -> dict:
+    def ask(self, instructions: str, payload: dict, effort: str) -> dict:
         body = json.dumps({"model": self.model, "store": False, "stream": True, "instructions": instructions,
+                           "reasoning": {"effort": effort},
                            "input": [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]},
                           ensure_ascii=False).encode()
         with _guarded(), _request("POST", "/responses", data=body, accept="text/event-stream") as response:
