@@ -62,6 +62,14 @@ function whyTab(f) {
     f.limitations_ko && section("이 발견이 증명하지 않는 것", para(f.limitations_ko))];
 }
 
+const evidenceAt = (ev) => `${ev.file}:${ev.line_start}${ev.line_end > ev.line_start ? `-${ev.line_end}` : ""}`;
+
+// ChatGPT 의심 확인은 발견(위치)마다 따로다: 묶음의 첫 발견만이 아니라 위치마다 판정·근거를 보인다
+function triageLine(t) {
+  const text = [TRIAGE_KO[t.verdict], t.reason_ko].filter(Boolean).join(" — ") + (t.evidence ? ` (근거: ${evidenceAt(t.evidence)})` : "");
+  return h("p", { className: t.suggested === "dismiss" ? "notice-blue" : "muted", textContent: text });
+}
+
 function whereTab(group, firstScan) {
   return group.findings.map((f) => h("div", { className: "place" },
     h("p", { className: "place-head" },
@@ -69,7 +77,8 @@ function whereTab(group, firstScan) {
       f.severity !== group.severity && h("span", { className: sevClass(f.severity), textContent: f.severity }),
       !firstScan && f.change === "new" && h("span", { className: "tag tag-new", textContent: "NEW" })),
     f.location.line > 0 ? code(f.evidence) : h("p", { className: "muted", textContent: "파일 전체" }),
-    f.change === "unknown" && h("p", { className: "muted", textContent: CHANGE_KO.unknown })));
+    f.change === "unknown" && h("p", { className: "muted", textContent: CHANGE_KO.unknown }),
+    f.triage && triageLine(f.triage)));
 }
 
 function metaTab(f, names) {
@@ -86,7 +95,7 @@ function metaTab(f, names) {
     f.extra?.ai_also_ko && ["ChatGPT", f.extra.ai_also_ko],
     t && ["ChatGPT 확인", [TRIAGE_KO[t.verdict], t.reason_ko].filter(Boolean).join(" — ")],
     t?.impact_ko && ["영향", t.impact_ko],
-    ev && ["근거 위치", `${ev.file}:${ev.line_start}${ev.line_end > ev.line_start ? `-${ev.line_end}` : ""}`],
+    ev && ["근거 위치", evidenceAt(ev)],
     t?.note_ko && ["참고", t.note_ko],
     f.introduced_in && ["처음 발견", f.introduced_in.slice(0, 7)],
     ["규칙 ID", f.rule_id],
@@ -126,7 +135,8 @@ function ignoreForm(unmarked, suggested, onSubmit, onCancel) {
   const reason = h("textarea", { rows: 2, maxLength: 500, placeholder: "예: 상위 미들웨어에서 관리자 확인을 해요",
     value: suggested?.reason_ko ?? "" });
   const picks = unmarked.length > 1 ? unmarked.map((f) => {
-    const box = h("input", { type: "checkbox", checked: true });
+    // ChatGPT가 오탐을 제안한 묶음이면 제안한 위치만 미리 고른다 (나머지는 실제 취약점일 수 있음)
+    const box = h("input", { type: "checkbox", checked: !suggested || f.triage?.suggested === "dismiss" });
     box.dataset.fingerprint = f.fingerprint;
     return h("label", { className: "check" }, box, h("span", { className: "mono", textContent: place(f) }));
   }) : [];
@@ -201,7 +211,7 @@ export function renderDetail(el, { group, tab, firstScan, names, repo, result, i
     h("p", { className: "muted", textContent: f.title_ko }),
     suspect && h("p", { className: "notice-amber", textContent: "주의: 지시문 같은 텍스트가 있는 파일이에요" }),
     suggested && h("p", { className: "notice-blue",
-      textContent: "ChatGPT가 보호 코드를 찾았어요. 판정 정보 탭에서 근거를 확인하고, 맞으면 [오탐이에요]로 표시하세요." }));
+      textContent: "ChatGPT가 보호 코드를 찾았어요. 위치 탭에서 어느 위치인지와 근거를 확인하고, 맞으면 [오탐이에요]로 표시하세요." }));
 
   if (tab === "fixed") {
     el.replaceChildren(head, h("p", { className: "notice-green", textContent: "직전 검사에 있었고 이번 검사에서 사라졌어요" }),

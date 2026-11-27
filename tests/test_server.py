@@ -271,11 +271,18 @@ def test_fix_api_attaches_fix_to_latest_scan(client, tmp_path, monkeypatch):
     # 묶음 안에서 오탐으로 표시한 위치는 다음 검사 전에도 ChatGPT에 고치라고 보내지 않는다
     secrets = [f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "secret-hardcoded"]
     assert len(secrets) >= 2
-    client.post(f"/api/repos/{added['repo']['id']}/ignores", json={"fingerprint": secrets[0]["fingerprint"]})
-    client.post(f"/api/scans/{first}/groups/secret-hardcoded/fix")
+    client.post(f"/api/scans/{first}/groups/secret-hardcoded/fix")        # 오탐 표시 전 수정안: 첫 발견에 붙는다
     wait(client, first)
-    sent = [loc["line"] for loc in fake.requests[-1]["locations"]]
-    assert secrets[0]["location"]["line"] not in sent and secrets[1]["location"]["line"] in sent
+    client.post(f"/api/repos/{added['repo']['id']}/ignores", json={"fingerprint": secrets[0]["fingerprint"]})
+    client.post(f"/api/scans/{first}/groups/secret-hardcoded/fix", json={"retry": True})
+    wait(client, first)
+    sent = fake.requests[-1]
+    assert secrets[0]["location"]["line"] not in [loc["line"] for loc in sent["locations"]]
+    assert secrets[1]["location"]["line"] in [loc["line"] for loc in sent["locations"]]
+    assert sent["rejected_diff"] == "x"                                          # 대표가 바뀌어도 [다른 수정안]은 이전 diff를 넘긴다
+    # 대표가 바뀌어도 그 규칙의 수정안은 하나: 화면이 옛 수정안을 계속 보이지 않게
+    now = [f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "secret-hardcoded"]
+    assert [f["fingerprint"] for f in now if f["fix"]] == [secrets[1]["fingerprint"]]
 
     again = client.post("/api/scans", json={"repo_id": added["repo"]["id"]}).json()["scan_id"]   # AI 연결 후 검사
     busy = client.post(f"/api/scans/{first}/groups/config-cors-credentials/fix")   # 검사가 끝나면 first는 최신이 아니게 된다
