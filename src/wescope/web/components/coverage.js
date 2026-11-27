@@ -5,9 +5,13 @@ import { STATE_KO, ANALYZER_STATUS_KO, OWASP_SCOPE_TITLE, NOT_A_GUARANTEE, LIMIT
 const ICON = {
   vulnerable: ["⚠", "icon-bad"], clean: ["✓", "icon-good"], partial: ["◐", "icon-warn"],
   skipped: ["✕", "icon-muted"], not_applicable: ["–", "icon-muted"], manual: ["?", "icon-info"],
+  reviewed: ["✓", "icon-info"], not_reviewed: ["✕", "icon-muted"],
 };
+// ChatGPT 검토 범위 (AI.md §9, ARCHITECTURE §4 ai_coverage). '검토함'은 '안전함'이 아니다
+const AI_NAMES = { "AI-AUTHZ": "업무 로직 인가", "AI-PAYMENT": "결제·상태 전이", "AI-FLOW": "파일 간 흐름", "AI-LANG": "정적 분석 미지원 언어" };
+const AI_STATE_KO = { reviewed: "AI 검토함", partial: "AI 검토 일부", not_reviewed: "AI 검토 못 함", not_applicable: "해당 없음" };
 
-function table(rows, names, withNotes) {
+function table(rows, names, withNotes, labels = STATE_KO) {
   const head = ["영역", "상태", "발견", withNotes && "사유"].filter(Boolean);
   return h("table", { className: "coverage" },
     h("thead", {}, h("tr", {}, ...head.map((t) => h("th", { textContent: t })))),
@@ -15,7 +19,7 @@ function table(rows, names, withNotes) {
       const [icon, tone] = ICON[r.state] ?? ["", ""];
       return h("tr", {},
         h("td", {}, h("span", { className: "mono", textContent: r.code }), ` ${names[r.code] ?? ""}`),
-        h("td", {}, h("span", { className: `state-icon ${tone}`, ariaHidden: "true", textContent: icon }), STATE_KO[r.state] ?? r.state),
+        h("td", {}, h("span", { className: `state-icon ${tone}`, ariaHidden: "true", textContent: icon }), labels[r.state] ?? r.state),
         h("td", { className: "num", textContent: r.findings ? String(r.findings) : "–" }),
         withNotes && h("td", { className: "muted", textContent: r.notes.join("; ") }));
     })));
@@ -23,7 +27,7 @@ function table(rows, names, withNotes) {
 
 export function renderCoverage(el, { result, names }) {
   const ai = result.ai_coverage.length
-    ? [table(result.ai_coverage, {}, true), h("p", { className: "muted", textContent: "AI가 살펴본 범위예요. 놓친 것이 있을 수 있어요." })]
+    ? [table(result.ai_coverage, AI_NAMES, true, AI_STATE_KO), h("p", { className: "muted", textContent: "AI가 살펴본 범위예요. 놓친 것이 있을 수 있어요." })]
     : [h("p", { className: "muted", textContent: "ChatGPT 분석을 하지 않았어요. 업무 로직 인가·결제·파일 간 흐름은 직접 확인이 필요해요." })];
   const langs = Object.keys(result.profile.languages ?? {}).join(", ") || "없음";
   const frameworks = (result.profile.frameworks ?? []).join(", ") || "없음";

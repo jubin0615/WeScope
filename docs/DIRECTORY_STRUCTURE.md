@@ -173,11 +173,10 @@ WeScope/
 │           │   ├── summary.js    #   요약 줄 (심각도 색 라벨 개수 · NEW/FIXED · 위험 점수 · 보고서 ↓)
 │           │   ├── tabs.js       #   보기 탭 (전체·NEW·FIXED·AI·오탐 표시·검사 범위)
 │           │   ├── list.js       #   왼쪽 위험 목록: 묶기·정렬·선택 유지
-│           │   ├── detail.js     #   오른쪽 상세: 수정안·설명·위치·판정 정보 탭, 하단 버튼
-│           │   ├── diffview.js   #   diff 뷰어 (추가·삭제 줄, 마스킹) — B8 ChatGPT 수정안과 함께
+│           │   ├── detail.js     #   오른쪽 상세: 수정안(diff 보기 포함)·설명·위치·판정 정보 탭, 하단 버튼(수정안 만들기·오탐)
 │           │   ├── prompt.js     #   수정 요청 프롬프트 조립 (검증된 diff 포함, 비밀값 원문 없음)
 │           │   ├── coverage.js   #   검사 범위 탭 (WS·OWASP·ChatGPT 검토 범위)
-│           │   └── settings.js   #   설정 창 (화면 가운데, 폭 640px)
+│           │   └── settings.js   #   설정 창 (화면 가운데, 폭 640px): 이 프로젝트 · ChatGPT · 화면 · 데이터
 │           ├── theme.js          # 첫 화면 테마 깜빡임 방지
 │           ├── app.css           # 디자인 토큰 (본문 · --chrome-* 상단 바 · --sev-* 심각도 글자색)
 │           └── fonts/            # Pretendard 가변 번들

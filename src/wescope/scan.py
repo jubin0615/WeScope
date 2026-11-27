@@ -91,7 +91,9 @@ def fix_group(repo_id: str, scan_id: str, rule_id: str, *, retry=False, progress
         raise LLMError("ChatGPT에 연결하지 않았어요", "login")
     repo = history.get_repo(repo_id)
     result = results.load(repo_id, scan_id)
-    group = next((g for g in fixer.groups(result.findings) if g[0].rule_id == rule_id), None)
+    ignored = history.ignored(repo_id)   # 오탐으로 표시한 위치는 다음 검사 전에도 고치라고 보내지 않는다
+    group = next((g for g in fixer.groups(result.findings, skip=lambda f: f.fingerprint in ignored)
+                  if g[0].rule_id == rule_id), None)
     if repo is None or group is None:
         raise KeyError(f"수정할 위험 후보가 없어요: {rule_id}")
     rejected = group[0].fix["diff"] if retry and group[0].fix else None

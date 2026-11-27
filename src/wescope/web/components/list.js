@@ -49,12 +49,21 @@ export function tags(group, tab, firstScan) {
 }
 
 export const TAG_CLASS = { NEW: "tag-new", AI: "tag-ai", "AI 확인": "tag-ai" };
+// 수정안 검증 상태 (DASHBOARD.md §6-1): [목록 행, 상세 머리, 색]
+export const VERIFY = {
+  verified: ["✓ 검증됨", "✓ 검증됨 — 적용·문법·재검사를 통과했어요", "icon-good"],
+  partial: ["◐ 문법 확인", "◐ 문법 확인 — 적용·문법은 통과했지만 재검사로는 확인하지 못했어요", "icon-warn"],
+  failed: ["✕ 검증 안 됨", "✕ 검증 안 됨 — 참고용이에요", "icon-muted"],
+};
+// 묶음의 수정안 = 대표 발견(서버가 고른 묶음의 첫 발견)에 붙은 fix
+export const groupFix = (group) => group.findings.find((f) => f.fix)?.fix ?? null;
 const shorten = (text, max = 44) => (text.length > max ? `…${text.slice(-(max - 1))}` : text);
 
 export function renderList(el, { list, tab, selected, firstScan, onSelect }) {
   el.replaceChildren(...list.map((g) => {
     const first = g.findings[0];
     const more = g.findings.length - 1;
+    const [verify, , tone] = VERIFY[groupFix(g)?.verification] ?? [];
     const row = h("button", { type: "button", className: "row", ariaPressed: String(g.rule_id === selected) },
       h("span", { className: sevClass(g.severity), textContent: g.severity }),
       h("span", { className: "row-title", textContent: first.tech_name_ko }),
@@ -62,7 +71,8 @@ export function renderList(el, { list, tab, selected, firstScan, onSelect }) {
         more > 0 && h("span", { className: "row-count", textContent: `${g.findings.length}곳` }),
         ...tags(g, tab, firstScan).map((t) => h("span", { className: `tag ${TAG_CLASS[t] || ""}`, textContent: t }))),
       h("span", { className: "row-where", title: where(first),
-        textContent: shorten(where(first)) + (more > 0 ? ` 외 ${more}곳` : "") }));
+        textContent: shorten(where(first)) + (more > 0 ? ` 외 ${more}곳` : "") }),
+      verify && h("span", { className: `row-verify ${tone}`, textContent: verify }));
     row.addEventListener("click", () => onSelect(g.rule_id));
     return row;
   }));

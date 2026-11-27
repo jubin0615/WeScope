@@ -63,7 +63,10 @@ def make_fix(scan_id: str, rule_id: str, request: Request, body: FixIn | None = 
     result = load_result(scan_id, request)
     if history.latest_scan_id(result.repo) != scan_id:
         raise HTTPException(409, "수정안은 가장 최근 검사에서만 만들 수 있어요. 다시 스캔한 뒤 시도하세요")
-    if not any(g[0].rule_id == rule_id for g in groups(result.findings)):
+    if request.app.state.jobs.busy(result.repo):   # 기다리는 검사가 끝나면 이 검사는 최신이 아니게 되어 수정안이 보이지 않는 결과에 붙는다
+        raise HTTPException(409, "검사가 끝난 뒤에 수정안을 만들 수 있어요")
+    ignored = history.ignored(result.repo)   # 오탐 표시는 다음 검사부터 결과에 반영되므로 그 전에도 여기서 뺀다
+    if not any(g[0].rule_id == rule_id for g in groups(result.findings, skip=lambda f: f.fingerprint in ignored)):
         raise HTTPException(404, "이 검사에 그 규칙의 열린 위험 후보가 없어요")
     if llm_client.connected() is None:
         raise HTTPException(409, "ChatGPT에 연결한 뒤에 수정안을 만들 수 있어요")

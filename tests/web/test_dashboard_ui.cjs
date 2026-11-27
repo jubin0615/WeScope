@@ -51,9 +51,9 @@ test("탭: FIXED·오탐은 전체에서 빠지고 각 탭에만", async () => {
   assert.equal(tabCounts(result.findings).ai, 0);
 });
 
-test("요약 숫자와 전체 탭이 같은 발견을 센다 (샘플 5개)", async () => {
+test("요약 숫자와 전체 탭이 같은 발견을 센다 (샘플 6개)", async () => {
   const { groups } = await load("components/list.js");
-  for (const name of ["clean.json", "first-scan.json", "rescan-new-fixed-dismissed.json", "secrets-git.json", "semgrep-skipped.json"]) {
+  for (const name of ["clean.json", "first-scan.json", "rescan-new-fixed-dismissed.json", "secrets-git.json", "semgrep-skipped.json", "with-fix.json"]) {
     const result = fixture(name);
     for (const [sev, count] of Object.entries(result.summary.severity)) {
       const shown = groups(result.findings, "all", sev).reduce((n, g) => n + g.findings.length, 0);
@@ -111,4 +111,48 @@ test("프롬프트: 형식 — 프로젝트·문제·위치(10곳까지)·수정
   assert.doesNotMatch(text, /발급처/);                                    // WS-01이 아니면 없음
   const many = { ...sql, findings: Array.from({ length: 12 }, (_, i) => ({ ...sql.findings[0], location: { file: "a.py", line: i + 1, route: null } })) };
   assert.match(buildPrompt({ repo: { name: "shop" }, result, group: many }), /위치: a\.py:1, .*a\.py:10 외 2곳\n/);
+});
+
+test("프롬프트: 수정안이 있으면 검증 상태와 diff·코드 밖에서 할 일", async () => {
+  const { groups } = await load("components/list.js");
+  const { buildPrompt } = await load("components/prompt.js");
+  const result = fixture("with-fix.json");
+  const list = groups(result.findings, "all");
+  const weak = list.find((g) => g.rule_id === "config-weak-secret");
+  const text = buildPrompt({ repo: { name: "shop" }, result, group: weak });
+  assert.match(text, /\n제안 수정 \(We-Scope 검증됨: 적용·문법·재검사 통과\):\n```diff\n--- a\/app\.py\n/);
+  assert.doesNotMatch(text, /수정 방법:/);
+  assert.match(text, /\n코드 밖에서 할 일: .+ \/ .+\n확인: /);
+  const failed = buildPrompt({ repo: { name: "shop" }, result, group: list.find((g) => g.rule_id === "inject-command") });
+  assert.match(failed, /제안 수정 \(검증 안 됨: 참고용\):/);
+  assert.doesNotMatch(failed, /코드 밖에서 할 일/);                      // follow_ups가 비면 줄째 생략
+  const none = buildPrompt({ repo: { name: "shop" }, result, group: list.find((g) => g.rule_id === "inject-sql") });
+  assert.match(none, /\n수정 방법: /);
+});
+
+test("목록: 수정안 검증 상태와 AI 탭 (ChatGPT가 찾음 · 확인함)", async () => {
+  const { groups, groupFix, VERIFY, tags } = await load("components/list.js");
+  const { findings } = fixture("with-fix.json");
+  const all = groups(findings, "all");
+  assert.equal(VERIFY[groupFix(all.find((g) => g.rule_id === "config-weak-secret")).verification][0], "✓ 검증됨");
+  assert.equal(groupFix(all.find((g) => g.rule_id === "inject-sql")), null);
+  assert.deepEqual(groups(findings, "ai").map((g) => g.rule_id), ["ai-price-tampering", "authz-idor"]);
+  assert.deepEqual(tags(all[0], "all", true), ["AI"]);
+});
+
+test("진행 표시: ChatGPT 단계와 진행 수", async () => {
+  const { progressLabel, STAGES } = await load("components/topbar.js");
+  assert.deepEqual(STAGES.map(([k]) => k), ["collect", "analyze", "organize", "ai", "save"]);
+  assert.equal(progressLabel({ status: "queued", stage: null }), "대기 중…");
+  assert.equal(progressLabel({ status: "running", stage: "analyze", ai_progress: null }), "정적 분석 중…");
+  assert.equal(progressLabel({ status: "running", stage: "ai", ai_progress: { task: "fix", done: 3, total: 5 } }), "ChatGPT 분석 중… 수정안 3/5");
+  assert.equal(progressLabel({ status: "running", stage: "ai", ai_progress: null }), "ChatGPT 분석 중…");
+});
+
+test("diff 줄 색과 설정 창 제외 패턴 정리", async () => {
+  const { diffClass } = await load("components/detail.js");
+  assert.deepEqual(["--- a/app.py", "+++ b/app.py", "@@ -1 +1 @@", "-old", "+new", " same"].map(diffClass),
+    ["diff-file", "diff-file", "diff-hunk", "diff-remove", "diff-add", ""]);
+  const { parseLines } = await load("components/settings.js");
+  assert.deepEqual(parseLines(" dist/ \r\n\n*.min.js\n  "), ["dist/", "*.min.js"]);
 });
