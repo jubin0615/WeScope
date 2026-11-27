@@ -114,6 +114,7 @@ def test_register_then_login_then_ask(server, openai):
     assert first["redirect_uri"] == f"{BASE}/auth/callback" and first["code_challenge_method"] == "S256"
     assert second["client_id"] == "client-1" and "agent_name_hint" not in second and second["state"] != first["state"]
     assert done.status_code == 200 and "연결했어요" in done.text
+    assert '<a href="/">' in done.text           # 새 탭이 막혀 대시보드 탭에서 로그인했어도 돌아갈 수 있게
     assert tab.get("/api/auth").json() == {"state": "ready", "message": "ChatGPT 연결됨"}
     if os.name == "nt":                                  # 토큰은 DPAPI로 암호화해 둔다
         assert b"access-1" not in (home() / "auth.json").read_bytes()
@@ -174,6 +175,29 @@ def test_http_errors_map_to_kinds(server, openai, status, kind):
     with pytest.raises(LLMError) as error:
         connected().ask("지시", {})
     assert error.value.kind == kind
+
+
+class Stalls(io.BytesIO):
+    """스트림 도중 네트워크가 멈춘다 (소켓 시간 초과)."""
+    status = 200
+
+    def __iter__(self):
+        yield b'data: {"type": "response.output_text.delta", "delta": "{"}\n'
+        raise TimeoutError("timed out")
+
+
+@pytest.mark.parametrize("broken", [lambda body: Stalls(), lambda body: Response(200, b"data: {not json\n")])
+def test_broken_response_stops_ai_but_keeps_the_scan(server, openai, monkeypatch, tmp_path, broken):
+    """읽는 도중의 네트워크·형식 오류도 LLMError로: AI 단계만 멈추고 정적 결과는 남는다."""
+    from conftest import materialize
+    from wescope.collector.snapshot import Target
+    from wescope.scan import run_scan
+    monkeypatch.setattr("wescope.analyzers.semgrep.find_semgrep", lambda: None)
+    log_in(server, openai)
+    openai.responses = broken
+    root, _ = materialize("vuln_flask", tmp_path)
+    result = run_scan(Target("folder", str(root)), ai=connected())
+    assert result.findings and result.ai["error"]["kind"] == "error" and result.ai["fixes"]["failed"] == 0
 
 
 def test_stream_must_complete_and_be_a_json_object():

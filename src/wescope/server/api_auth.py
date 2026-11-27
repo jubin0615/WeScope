@@ -55,11 +55,14 @@ def callback(request: Request):
     if following:                                                 # 등록을 마쳤다: 이어서 로그인 승인
         url, state.auth_pending = following
         return RedirectResponse(url, 303)
-    return _page("ChatGPT에 연결했어요", "이 탭을 닫고 대시보드로 돌아가세요.")
+    return _page("ChatGPT에 연결했어요", "대시보드로 돌아가세요. 대시보드가 다른 탭에 열려 있으면 이 탭은 닫아도 돼요.")
 
 
 def _page(title: str, message: str, status: int = 200) -> HTMLResponse:
+    """새 탭이 막히면 대시보드 탭 자체가 로그인으로 넘어온다. 그래서 돌아갈 링크를 둔다
+    (이 서버 안의 링크라 SameSite=Strict 쿠키가 실린다)."""
     body = (f'<!doctype html><html lang="ko"><meta charset="utf-8"><title>We-Scope</title>'
             f'<body style="font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem">'
-            f"<h1>{html.escape(title)}</h1><p>{html.escape(message)}</p></body></html>")
+            f'<h1>{html.escape(title)}</h1><p>{html.escape(message)}</p><p><a href="/">대시보드로 돌아가기</a></p>'
+            f"</body></html>")
     return HTMLResponse(body, status, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})

@@ -1,7 +1,9 @@
 """실제 ChatGPT 클라이언트 (v0.2 inference.py 이식): 내 구독으로 Responses API를 스트리밍 호출, 대화는 저장하지 않는다(store: false)."""
 import functools
+import http.client
 import json
 import time
+from contextlib import contextmanager
 
 from wescope.llm import auth
 from wescope.llm.client import LLMError
@@ -12,6 +14,16 @@ _KINDS = {401: "login", 403: "plan", 429: "limit"}
 _MESSAGES = {401: "ChatGPT 연결이 만료됐어요. 다시 연결하세요",
              403: "ChatGPT 구독 사용 자격이 없어요. Plus 이상 구독이 필요해요",
              429: "ChatGPT 사용량 한도에 도달했어요"}
+
+
+@contextmanager
+def _guarded():
+    """읽는 도중의 오류(시간 초과·끊긴 스트림·깨진 JSON·토큰 잠금 대기 초과)도 LLMError로.
+    LLMError가 아니면 AI 단계만이 아니라 검사 전체가 실패한다. 메시지에는 오류 이름만 (내용에 주소·토큰이 있을 수 있다)."""
+    try:
+        yield
+    except (OSError, ValueError, http.client.HTTPException) as error:
+        raise LLMError(f"ChatGPT 응답을 받지 못했어요 ({type(error).__name__})") from None
 
 
 def _request(method: str, path: str, *, data: bytes | None = None, accept="application/json"):
@@ -70,7 +82,7 @@ class ChatGPT:
     @functools.cached_property
     def model(self) -> str:
         """구독에서 쓸 수 있는 모델 중 첫 번째. shortcut: 모델 고르기 설정 없음, 필요해지면 설정 창(F4)에 둔다."""
-        with _request("GET", "/models") as response:
+        with _guarded(), _request("GET", "/models") as response:
             for model in json.load(response).get("models", []):
                 if model.get("visibility") == "list" and model.get("slug"):
                     return model["slug"]
@@ -80,5 +92,5 @@ class ChatGPT:
         body = json.dumps({"model": self.model, "store": False, "stream": True, "instructions": instructions,
                            "input": [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]},
                           ensure_ascii=False).encode()
-        with _request("POST", "/responses", data=body, accept="text/event-stream") as response:
+        with _guarded(), _request("POST", "/responses", data=body, accept="text/event-stream") as response:
             return parse(collect(response))
