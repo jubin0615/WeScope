@@ -19,7 +19,7 @@ const EMPTY = {
 };
 
 const state = {
-  repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null, latestScan: null,
+  repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null, latestScan: null, auth: null,
   names: { ws: {}, owasp: {} },   // GET /api/catalog: 코드값 → 이름. 못 받으면 코드만 보인다
   ...loadView(),
 };
@@ -74,8 +74,32 @@ function render() {
 function renderTop() {
   if (parts.top?.querySelector("details[open]")) return;   // 프로젝트 메뉴를 보는 중이면 닫지 않는다
   renderTopbar(parts.top,
-    { repos: state.repos, repo: repo(), result: state.result, job: jobHere(), failed: state.failed, offline: state.offline },
-    { selectRepo: (id) => guard(() => selectRepo(id)), addRepo, rescan: () => guard(rescan), openCoverage: () => setTab("coverage") });
+    { repos: state.repos, repo: repo(), result: state.result, job: jobHere(), failed: state.failed, offline: state.offline,
+      auth: state.auth },
+    { selectRepo: (id) => guard(() => selectRepo(id)), addRepo, rescan: () => guard(rescan), openCoverage: () => setTab("coverage"),
+      connectChatGPT });
+}
+
+// 새 탭은 누르는 순간 열어야 팝업 차단을 피한다. 승인 주소를 받은 뒤 그 탭을 보낸다 (OpenAI 쪽이 이 창을 건드리지 못하게 opener를 끊는다)
+function connectChatGPT() {
+  const tab = window.open("", "_blank");
+  if (tab) tab.opener = null;
+  guard(async () => {
+    try {
+      const { url } = await api("/api/auth/login", { method: "POST" });
+      if (tab) tab.location = url; else window.location.assign(url);
+    } catch (err) {
+      tab?.close();
+      throw err;
+    }
+  });
+}
+
+async function refreshAuth() {
+  const auth = await api("/api/auth").catch(() => null);
+  if (JSON.stringify(auth) === JSON.stringify(state.auth)) return false;
+  state.auth = auth;
+  return true;
 }
 
 function firstScan() {
@@ -252,6 +276,7 @@ async function boot() {
     const info = await api("/api/state");
     state.offline = false;
     state.latestScan = info.latest_scan;
+    await refreshAuth();   // GET /api/auth: 상단 바 ChatGPT 상태
     api("/api/settings").then((settings) => window.setTheme(settings.theme), () => {});
     const names = await api("/api/catalog").catch(() => null);
     if (names) state.names = { ws: Object.fromEntries(names.ws.map((w) => [w.code, w.name_ko])),
@@ -273,6 +298,7 @@ async function poll() {
   try {
     const info = await api("/api/state");
     if (info.running && !state.jobs[info.running.repo_id]) watch(info.running);
+    if (await refreshAuth() && parts.top) renderTop();   // 다른 탭에서 ChatGPT 연결을 마쳤으면
     if (info.latest_scan === state.latestScan) return;
     state.latestScan = info.latest_scan;
     state.repos = await api("/api/repos");

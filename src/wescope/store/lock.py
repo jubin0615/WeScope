@@ -2,6 +2,7 @@
 
 - scan.lock: 서버 작업 큐와 서버 없이 도는 hook이 같은 이력에 동시에 쓰지 않게
 - launch.lock: 동시에 실행한 wescope끼리 '실행 중인 서버 확인 → 새 서버 시작'을 한 번에 하나씩
+- auth.lock: 서버와 hook이 ChatGPT 토큰을 동시에 갱신하지 않게 (llm.auth)
 """
 import os
 import threading
@@ -62,10 +63,14 @@ class FileLock:
 
 
 @contextmanager
-def scan_lock(timeout: float = 600):
-    lock = FileLock("scan.lock")
+def held(name: str, timeout: float):
+    lock = FileLock(name)
     lock.acquire(timeout)
     try:
         yield
     finally:
         lock.release()
+
+
+def scan_lock(timeout: float = 600):
+    return held("scan.lock", timeout)

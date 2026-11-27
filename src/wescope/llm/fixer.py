@@ -8,7 +8,7 @@ from wescope.llm.context import fix_payload
 from wescope.llm.guards import Redactor, map_strings
 from wescope.llm.verify import verify
 
-PROMPT_VERSION = "fix-1"
+PROMPT_VERSION = "fix-2"     # fix-2: 이번 rule의 줄만 고친다 (실제 응답에서 다른 묶음의 비밀값 줄까지 고쳤다)
 AUTO_SEVERITIES = ("CRITICAL", "HIGH")
 AUTO_GROUPS = 5                       # 검사 중 자동으로 만드는 묶음 수 (스캔당 예산, AI.md §7)
 MAX_DIFF = 100_000
@@ -21,10 +21,13 @@ INSTRUCTIONS = """너는 웹앱 보안 취약점을 고치는 시니어 개발�
 
 지킬 것:
 - 원인을 고친다 (rule.avoid_ko에 적힌 방식은 쓰지 않는다). 같은 문제의 모든 위치를 한 번에 일관되게 고친다.
+- 이번 rule의 문제만 고친다. 같은 파일에 다른 문제가 보여도 그 줄은 바꾸지 말고, 알려야 하면 follow_ups에 적는다
+  (다른 문제는 따로 수정안이 만들어진다. 같은 줄을 여러 수정안이 고치면 차례로 적용할 때 충돌한다).
 - 함수 이름·시그니처·응답 형식·라우트를 바꾸지 않는다. 필요한 줄만 바꾸고 리포맷하지 않는다.
 - 프로젝트가 이미 쓰는 프레임워크·ORM·검증 라이브러리·환경변수 로딩 방식을 따른다 (project 참고).
 - 새 의존성은 꼭 필요할 때만, new_dependencies에 이유와 설치 명령을 적는다.
-- «WS_SECRET_n» 은 비밀값 자리표시다. 값을 추측하지 말고, 코드에서 빼서 환경변수로 읽게 고친다.
+- «WS_SECRET_n» 은 비밀값 자리표시다. 값을 추측하지 않는다. rule이 비밀값 문제(하드코딩된 키·약한 서명 키 등)일 때만
+  그 값을 코드에서 빼서 환경변수로 읽게 고친다. 그 밖의 rule이면 자리표시가 든 줄을 그대로 둔다.
 - 코드로 끝나지 않는 일(키 폐기·재발급, 배포 환경변수 등록 등)은 follow_ups에 한국어로 적는다.
 - files의 content는 줄마다 '번호| ' 접두어가 붙어 있다. diff에는 이 접두어를 넣지 않는다.
 - previous_attempt가 있으면 그 diff가 실패한 이유(failures)를 고쳐서 다시 만든다. rejected_diff가 있으면 그와 다른 방식으로 만든다.
@@ -50,10 +53,12 @@ class Session:
 
     def __init__(self, client):
         self.client = client
+        self.model = None
         self.stats = {"requests": 0, "cache_hits": 0}
 
     def ask(self, payload: dict) -> tuple[dict, str]:
-        key = cache.key(self.client.model, PROMPT_VERSION, INSTRUCTIONS, payload)
+        self.model = self.client.model      # 실제 클라이언트는 첫 요청 때 모델 목록을 받는다 (실패하면 LLMError)
+        key = cache.key(self.model, PROMPT_VERSION, INSTRUCTIONS, payload)
         answer = cache.get(key)
         if answer is not None:
             self.stats["cache_hits"] += 1
@@ -104,7 +109,7 @@ def auto_fixes(findings, ctx, client, rescan, *, level: str, skip=lambda f: Fals
     session = Session(client)
     candidates = [g for g in groups(findings, skip) if g[0].severity in AUTO_SEVERITIES]
     targets = candidates[:limit]
-    summary = {"level": level, "model": client.model, "requests": 0, "cache_hits": 0,
+    summary = {"level": level, "model": None, "requests": 0, "cache_hits": 0,
                "fixes": {"verified": 0, "partial": 0, "failed": 0},
                "budget_exceeded": len(candidates) > limit, "remaining_groups": len(candidates) - len(targets),
                "error": None}
@@ -118,5 +123,5 @@ def auto_fixes(findings, ctx, client, rescan, *, level: str, skip=lambda f: Fals
                 break          # 로그인·자격·한도 문제는 다음 요청도 실패한다: 바로 멈추고 지금까지 결과는 둔다
             continue
         summary["fixes"][group[0].fix["verification"]] += 1
-    summary.update(session.stats)
+    summary.update(session.stats, model=session.model)
     return summary

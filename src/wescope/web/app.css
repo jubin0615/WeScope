@@ -215,3 +215,6 @@ table.coverage { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tools { margin-top: var(--s6); font-size: 13px; color: var(--text-2); }
 .tools summary { cursor: pointer; font-weight: 600; color: var(--text); }
 .tools ul { padding-left: 1.2em; }
+.chatgpt { font-size: 13px; white-space: nowrap; }
+.chatgpt-on { color: var(--accent); font-weight: 600; }
+.topbar .link.chatgpt { color: var(--text-3); }

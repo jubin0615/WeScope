@@ -3,6 +3,7 @@
 - 첫 접속 `/?ticket=…` → HttpOnly 쿠키로 바꾸고 주소창에서 티켓을 지운다 (303 → `/`)
 - 모든 요청: Host가 127.0.0.1/localhost:포트인지(DNS 리바인딩 방지), Origin이 있으면 같은 주소인지 확인
 - `/healthz`만 티켓 없이 열려 있다 (실행기가 서버가 살아 있는지 확인하는 용도, 코드·결과 없음)
+- `/auth/callback`은 티켓 쿠키 대신 로그인 state로 확인한다 (api_auth.py 맨 위 설명)
 """
 import os
 import secrets
@@ -14,7 +15,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from wescope.server import api_repos, api_scans, api_state
+from wescope.server import api_auth, api_repos, api_scans, api_state
 from wescope.server.jobs import Jobs
 from wescope.server.state import COOKIE
 WEB_DIR = Path(__file__).parent.parent / "web"
@@ -31,6 +32,8 @@ def create_app(ticket: str, port: int, jobs: Jobs | None = None) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.jobs = jobs
+    app.state.auth_redirect = f"http://127.0.0.1:{port}{api_auth.CALLBACK}"
+    app.state.auth_pending = app.state.auth_error = None
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     origins = {f"http://{host}" for host in hosts}
 
@@ -45,7 +48,7 @@ def create_app(ticket: str, port: int, jobs: Jobs | None = None) -> FastAPI:
             return deny(request, 400, "허용되지 않은 주소예요")
         if request.headers.get("origin") not in (None, *origins):
             return deny(request, 403, "다른 사이트에서 온 요청은 받지 않아요")
-        if request.url.path == "/healthz":
+        if request.url.path in ("/healthz", api_auth.CALLBACK):
             return await call_next(request)
         given = request.query_params.get("ticket")
         if request.url.path == "/" and given is not None:
@@ -68,7 +71,7 @@ def create_app(ticket: str, port: int, jobs: Jobs | None = None) -> FastAPI:
 
     app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")   # CSS·JS·폰트. 위 guard(티켓 쿠키)를 똑같이 거친다
 
-    for module in (api_state, api_repos, api_scans):
+    for module in (api_state, api_repos, api_scans, api_auth):
         app.include_router(module.router)
     return app
 
