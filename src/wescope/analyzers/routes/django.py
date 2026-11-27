@@ -39,41 +39,59 @@ def _str(node):
 
 def routes(files: dict[str, tuple[str, ast.Module]]) -> list[Route]:
     """files: {경로: (원문, AST)} — 저장소의 모든 Python 파일."""
-    patterns, includes, defs, router_prefix = [], {}, {}, {}
+    # patterns: (view를 찾을 기준 파일, URL 접두어를 물려받는 urls 파일, 경로 조각, view 이름, router 등록인지)
+    patterns, includes, defs, registrations, mounts, imports = [], {}, {}, [], [], {}
     for file, (_, tree) in files.items():
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 defs.setdefault(node.name, []).append((file, node))
-        for call in ast.walk(tree):
-            if not isinstance(call, ast.Call):
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):              # from api.router import router
+                module = node.module or ""
+                if node.level:                                 # from .router import router → 같은 폴더의 router.py
+                    folder = file.rsplit("/", node.level)[0] if file.count("/") >= node.level else ""
+                    module = f"{folder}/{module}".strip("/").replace("/", ".")
+                imports.setdefault(file, {}).update({a.asname or a.name: module for a in node.names})
+            if not isinstance(node, ast.Call):
                 continue
+            call = node
             # router.register(r"orders", OrderViewSet) — admin.site.register(Model)은 첫 인자가 문자열이 아니라 빠진다
-            if _name(call.func) == "register" and len(call.args) >= 2 and _str(call.args[0]) is not None:
-                patterns.append((file, call.args[0].value, _name(call.args[1]), True))
+            if (_name(call.func) == "register" and isinstance(call.func, ast.Attribute) and len(call.args) >= 2
+                    and _str(call.args[0]) is not None):
+                registrations.append((file, _name(call.func.value), call.args[0].value, _name(call.args[1])))
             if not (_name(call.func) in ("path", "re_path", "url") and len(call.args) >= 2
                     and _str(call.args[0]) is not None):
                 continue
             view = call.args[1]
             if isinstance(view, ast.Call) and _name(view.func) == "include":
                 if view.args and isinstance(view.args[0], ast.Attribute) and view.args[0].attr == "urls":
-                    router_prefix[file] = call.args[0].value          # path("api/", include(router.urls))
+                    mounts.append((file, _name(view.args[0].value), call.args[0].value))   # include(router.urls)
                 elif target := _module_file(files, _str(view.args[0]) if view.args else None):
                     includes[target] = (file, call.args[0].value)
             else:
-                patterns.append((file, call.args[0].value, _name(view), False))
+                patterns.append((file, file, [call.args[0].value], _name(view), False))
+    # router 접두어는 router 변수로 잇는다: 연결한 파일에서 만들었거나, 그 파일이 import한 모듈에서 만든 같은 이름의 router
+    mounted = set()
+    for mount_file, var, prefix in mounts:
+        source = mount_file if any(f == mount_file and v == var for f, v, _, _ in registrations) \
+            else _module_file(files, imports.get(mount_file, {}).get(var))
+        for reg in registrations:
+            if reg[0] == source and reg[1] == var:
+                patterns.append((reg[0], mount_file, [prefix, reg[2].strip("^$/") + "/"], reg[3], True))
+                mounted.add(reg)
+    patterns += [(f, f, [route.strip("^$/") + "/"], name, True)       # 연결한 곳을 못 찾으면 접두어 없이
+                 for f, v, route, name in registrations if (f, v, route, name) not in mounted]
     login = ["LoginRequiredMiddleware"] if _login_middleware(files) else []
     drf_default = _drf_default(files)
 
     # 같은 view가 여러 URL에 걸리면 URL마다 판정한다 (관리자 경로인지는 URL에 달렸다). 겹친 발견은 부르는 쪽이 합친다
     found = []
-    for urls_file, route, name, router in patterns:
-        target = _pick(defs.get(name, []), urls_file)
+    for pick_file, urls_file, route_parts, name, router in patterns:
+        target = _pick(defs.get(name, []), pick_file)
         if target is None:
             continue
         file, node = target
-        parts = _prefix(includes, urls_file) + ([router_prefix.get(urls_file, ""), route.strip("^$/") + "/"]
-                                                if router else [route])
-        url = "/" + "".join(_clean(p) for p in parts)
+        url = "/" + "".join(_clean(p) for p in _prefix(includes, urls_file) + route_parts)
         if isinstance(node, ast.ClassDef):
             found += _class_routes(files, defs, file, node, url, router, login, drf_default)
         else:
@@ -101,16 +119,18 @@ def _class_routes(files, defs, file, node, url, router, login, drf_default) -> l
     drf = any("APIView" in b or "ViewSet" in b or b.endswith("ModelMixin") for b in bases)
     outer = list(bases) + login
     for _, cls in lineage:
-        outer += [_guard(d) for d in cls.decorator_list] + [_guard(s) for s in cls.body if isinstance(s, ast.Assign)]
+        outer += [_guard(d) for d in cls.decorator_list]
+        outer += [_guard(s) for s in cls.body if isinstance(s, ast.Assign) and not _assigns(s, "permission_classes")]
         outer += [_guard(d) for m in cls.body if isinstance(m, ast.FunctionDef) and m.name == "dispatch"
                   for d in m.decorator_list]
-    if drf and not any(_assigns(cls, "permission_classes") for _, cls in lineage):
-        outer.append(drf_default)                     # 클래스에 없으면 settings REST_FRAMEWORK 기본 권한
+    # DRF permission_classes는 합쳐지지 않고 덮어쓴다: 상속 순서상 가장 가까운 클래스의 것 하나, 없으면 settings 기본 권한
+    own = next((s for _, cls in lineage for s in cls.body if _assigns(s, "permission_classes")), None)
+    perm = _guard(own) if own is not None else drf_default if drf else ""
     methods = {}                                      # 이름 → (파일, 정의) — 자식 클래스 정의가 먼저
     for cls_file, cls in reversed(lineage):
         methods |= {m.name: (cls_file, m) for m in cls.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))}
 
-    found = []
+    found, outer = [], outer + [perm]
     if router:
         lookup = next((_str(s.value) for _, cls in lineage for s in cls.body if _assigns(s, "lookup_field")), None)
         detail_url = f"{url}<{lookup or 'pk'}>/"
@@ -128,9 +148,11 @@ def _class_routes(files, defs, file, node, url, router, login, drf_default) -> l
                 kw = {k.arg: k.value for k in deco.keywords}
                 http = [e.value.upper() for e in getattr(kw.get("methods"), "elts", []) if _str(e)] or ["GET"]
                 detail = isinstance(kw.get("detail"), ast.Constant) and kw["detail"].value is True
+                # @action(permission_classes=[...])는 클래스 권한을 덮어쓴다 (데코레이터 쪽 이름은 _guard가 남긴다)
+                guards = outer[:-1] if "permission_classes" in kw else outer
                 found.append(_route(meth_file, files[meth_file][0], meth, http,
                                     f"{detail_url if detail else url}{_str(kw.get('url_path')) or name}/",
-                                    f"{node.name}.{name}", outer))
+                                    f"{node.name}.{name}", guards))
         return found
     for name in _HTTP:
         if name in methods:
@@ -200,10 +222,13 @@ def _route(file, text, node, methods, url, function, outer) -> Route:
 def _guard(node) -> str:
     """가드 단서 원문. DRF permission_classes는 클래스 이름만 남긴다: 'permission'이라는 글자가 관리자 확인으로 읽히지 않게
     (IsAuthenticated → 로그인 단서, IsAdminUser → 관리자 단서, AllowAny → 단서 없음)."""
+    keyword = next((k.value for k in getattr(node, "keywords", []) if k.arg == "permission_classes"), None)
     if isinstance(node, ast.Assign) and any(_name(t) == "permission_classes" for t in node.targets):
         source = ast.unparse(node.value)
     elif isinstance(node, ast.Call) and _name(node.func) == "permission_classes":
         source = " ".join(ast.unparse(a) for a in node.args)
+    elif isinstance(node, ast.Call) and keyword is not None:      # @action(..., permission_classes=[...])
+        source = ast.unparse(keyword)
     else:
         return ast.unparse(node)
     names = [word.split(".")[-1] for word in re.findall(r"[\w.]+", source)]   # permissions.IsAuthenticated → IsAuthenticated
