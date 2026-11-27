@@ -97,7 +97,7 @@ export function renderTopbar(el, view, actions) {
     statusLine(view, actions),
     h("span", { className: "spacer" }),
     chatgpt(view.auth, actions),
-    h("button", { type: "button", className: "icon-btn", ariaLabel: "설정", title: "설정", textContent: "⚙",
-      disabled: view.offline, onclick: () => actions.openSettings() }),
+    h("button", { type: "button", className: "btn settings-btn", disabled: view.offline, onclick: () => actions.openSettings() },
+      h("span", { className: "settings-icon", ariaHidden: "true", textContent: "⚙" }), "설정"),
     rescan);
 }
