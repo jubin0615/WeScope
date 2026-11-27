@@ -18,6 +18,10 @@ def _each(items, task, work, summary, progress) -> bool:
             summary["error"] = {"kind": error.kind, "message": str(error)}
             if error.kind != "error":
                 return False
+        except Exception as error:
+            # 응답 형식을 놓친 곳이 있어도 이 항목만 실패로 남긴다. 검사가 통째로 멈추면 정적 결과도 저장되지 않고,
+            # 그 응답은 캐시에 있어 다시 스캔해도 똑같이 멈춘다. 오류 종류 이름은 남겨 버그를 찾을 수 있게 한다
+            summary["error"] = {"kind": "error", "message": f"ChatGPT 결과를 처리하지 못했어요 ({type(error).__name__})"}
     return True
 
 

@@ -93,6 +93,7 @@ def test_protected_with_real_evidence_is_only_a_suggestion(app):
     {"file": "models.py", "line_start": 1, "line_end": 1, "quoted_code": "from flask import"},   # 보내지 않은 파일
     {"file": "app.py", "line_start": 900, "line_end": 901, "quoted_code": "@login_required"},    # 파일 밖 줄
     {"file": ["app.py"], "line_start": "1", "line_end": None, "quoted_code": 3},                # 형식이 틀린 값
+    {"file": "app.py", "line_start": 1, "line_end": 1, "quoted_code": 3},                       # 인용만 문자열이 아님
     None,
 ])
 def test_protected_without_matching_evidence_stays_unclear(app, evidence):
@@ -129,6 +130,22 @@ def test_suspicious_text_in_another_file_does_not_cancel_protected(app):
     assert "llm_helpers.py" in [f["path"] for f in admin_request["files"]]     # 함께 보낸 파일에는 있다
     admin = by_rule(result)[ADMIN]
     assert admin.triage["verdict"] == "protected" and not admin.triage["instruction_suspect"]
+
+
+def test_unexpected_error_on_one_item_keeps_the_scan(app, monkeypatch):
+    """응답 처리에서 예상하지 못한 오류가 나도 그 항목만 실패로 남기고, 나머지 확인·수정안·정적 결과는 끝까지 간다."""
+    root, _ = app
+    real = triage.check
+
+    def breaks_on_idor(session, ctx, finding):
+        if finding.rule_id == "authz-idor":
+            raise TypeError("응답 처리 버그")
+        return real(session, ctx, finding)
+    monkeypatch.setattr(triage, "check", breaks_on_idor)
+    result, fake = scan(root, lambda rule, p: verdict("unclear"))
+    assert result.ai["error"] == {"kind": "error", "message": "ChatGPT 결과를 처리하지 못했어요 (TypeError)"}
+    assert result.ai["triage"]["unclear"] == 2 and any(r["task"] == "fix" for r in fake.requests)
+    assert by_rule(result)["authz-idor"].triage is None
 
 
 def test_budget_and_cache(app, monkeypatch):

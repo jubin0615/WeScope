@@ -132,9 +132,9 @@ def check(session, ctx, finding) -> str:
     note = None
     if verdict == "protected":
         sent = {f["path"] for f in payload["files"]}
-        found = isinstance(path, str) and path in sent and safe_path(path) and quote_matches(
-            ctx.text(path), evidence.get("line_start"), evidence.get("line_end"),
-            redactor.reveal(evidence.get("quoted_code") or ""))
+        quoted = evidence.get("quoted_code")
+        found = path in sent and safe_path(path) and isinstance(quoted, str) and quote_matches(   # 문자열일 때만 reveal
+            ctx.text(path), evidence.get("line_start"), evidence.get("line_end"), redactor.reveal(quoted))
         if suspect:
             verdict, note = "unclear", "지시문 같은 텍스트가 있는 코드라 '보호 코드가 있다'는 판단은 쓰지 않았어요"
         elif not found:
