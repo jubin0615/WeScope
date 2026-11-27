@@ -1,4 +1,5 @@
 """WS-01 비밀값 노출. 가장 먼저 실행되어 ctx.secrets를 채운다 (이후 모든 출력의 마스킹 기준)."""
+import re
 from fnmatch import fnmatch
 from pathlib import PurePosixPath
 
@@ -65,7 +66,9 @@ class SecretsAnalyzer(Analyzer):
         client = P.is_client_file(path, text)
         bare = rule in ("secret-infra-config", "secret-dev-tool") or path.endswith(P.CONFIG_SUFFIXES)
         hits, seen_env = [], set()
+        in_key = False
         for number, line in enumerate(text.splitlines(), 1):
+            in_key = _register_key_body(ctx, line, in_key)
             found = list(_provider_values(line))
             if rule != "secret-doc":
                 known = [v for _, v, _ in found if v]
@@ -85,6 +88,20 @@ class SecretsAnalyzer(Analyzer):
                     seen_env.add(name)
                     hits.append(RawHit("secret-frontend-env", path, number, evidence=line.strip(), extra={"kind": name}))
         return hits
+
+
+def _register_key_body(ctx, line, in_key) -> bool:
+    """PEM 개인키 본문을 가릴 값으로 등록한다. 돌려주는 값: 다음 줄도 본문인가.
+    한 줄 문자열('-----BEGIN ...-----\\nMIIC...\\n-----END ...')과 여러 줄 PEM(머리줄 다음 줄부터 END까지)을 모두 다룬다."""
+    header = P.PRIVATE_KEY.search(line)
+    if not header and not in_key:
+        return False
+    body, end, _ = line[header.end() if header else 0:].partition("-----END")
+    # 문자열 안의 \n·\r 이스케이프와 따옴표를 걷어 내고 base64 조각만 남긴다 (+는 base64 글자라 나누지 않는다)
+    chunks = [t for t in re.split(r"\\[rnt]|[\s\"'`,;]", body) if P.PEM_CHUNK.fullmatch(t)]
+    for chunk in chunks:
+        ctx.secrets.register(chunk)
+    return not end and bool(header or chunks)
 
 
 def _rule_for(path: str) -> str:
@@ -113,7 +130,7 @@ def _provider_values(line):
                     kind, critical = "jwt-service-role", True
             yield kind, value, critical
     if P.PRIVATE_KEY.search(line):
-        yield "private-key", None, True   # 머리줄만 있으므로 등록할 값 없음
+        yield "private-key", None, True   # 본문은 _register_key_body가 등록한다
     for match in P.CONNECTION.finditer(line):
         if not P.is_placeholder(match["value"]) and match["value"].lower() not in ("password", "pass"):
             yield "connection-string", match["value"], False

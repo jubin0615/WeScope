@@ -35,6 +35,7 @@ def fake_secret(kind: str, seed: str) -> str:
         "aws": "AKIA" + chars(16, string.ascii_uppercase + string.digits),
         "npm": "npm_" + chars(36),
         "password": "Pw" + chars(14),
+        "pem": "MIIE" + chars(60, string.ascii_letters + string.digits + "+/"),   # PEM 개인키 본문 한 줄
     }[kind]
 
 

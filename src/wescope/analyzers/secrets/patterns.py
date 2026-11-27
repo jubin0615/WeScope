@@ -20,6 +20,7 @@ PROVIDERS = [
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"), False),
 ]
 PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")
+PEM_CHUNK = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")   # 개인키 본문 한 조각 (base64)
 CONNECTION = re.compile(r"\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|rediss?|amqps?)"
                         r"://[^\s:@/'\"]*:(?P<value>[^\s@/'\"]+)@")
 HIGH_PRIVILEGE = {"anthropic", "openai", "stripe", "aws", "jwt-service-role", "private-key"}

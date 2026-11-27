@@ -4,7 +4,10 @@ import shutil
 import pytest
 
 from conftest import expected_hits, make_git_repo, materialize
+from wescope.analyzers.registry import analyzers
+from wescope.collector.context import collect
 from wescope.collector.snapshot import Target
+from wescope.engine.runner import run_all
 from wescope.models.scan_result import ScanResult
 from wescope.scan import run_scan
 
@@ -63,6 +66,16 @@ def test_no_secret_leaves_in_result(name, tmp_path):
     _, planted, result = scan(name, tmp_path)
     text = result.to_json()
     assert planted and not [p for p in planted if p in text]
+
+
+def test_private_key_body_is_masked(tmp_path):
+    """여러 줄 PEM 본문은 evidence에 안 나와도 ChatGPT로 보내는 코드에는 들어간다: 본문 줄까지 가릴 값으로 등록돼야 한다."""
+    root, planted = materialize("secrets_zoo", tmp_path)
+    with collect(Target("folder", str(root))) as ctx:
+        run_all(ctx, [a for a in analyzers() if a.id == "secrets"])
+        values = set(ctx.secrets.values())
+    keys = {p for p in planted if p.startswith("MIIE")}
+    assert len(keys) == 4 and keys <= values
 
 
 @needs_semgrep
