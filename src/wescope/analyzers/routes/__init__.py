@@ -5,17 +5,17 @@
 import re
 
 from wescope.analyzers.base import Analyzer, AnalyzerResult
-from wescope.analyzers.routes import express, python
+from wescope.analyzers.routes import django, express, python
 from wescope.collector.inventory import language
 from wescope.models.finding import RawHit, Scope
 
-FRAMEWORKS = {"flask", "fastapi", "express"}
+FRAMEWORKS = {"flask", "fastapi", "django", "express"}
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 ADMIN_PATH = re.compile(r"(?:^|/)(?:admin|internal|manage)(?:/|$|-|_)|/dashboard/admin", re.I)
 ADMIN_HINT = re.compile(r"is_?admin|role\s*[!=]==?\s*['\"]admin|['\"]admin['\"]\s*[!=]==?|admin_required|require_?admin"
-                        r"|require_?role|roles?_required|has_?role|permission|superuser|is_staff|authori[sz]e", re.I)
-AUTH_HINT = re.compile(r"login_required|jwt_required|token_required|auth|current_user|get_current_user|require_?login"
+                        r"|require_?role|roles?_required|has_?role|permission|superuser|is_staff|staff_member|authori[sz]e", re.I)
+AUTH_HINT = re.compile(r"login_?required|user_passes_test|jwt_required|token_required|auth|current_user|get_current_user|require_?login"
                        r"|is_authenticated|verify_?token|req\.user|request\.user|session\[|passport|protect"
                        r"|ensureLoggedIn|require_?user|getServerSession", re.I)
 DB_WRITE = re.compile(r"\.(?:add|add_all|commit|delete|save|create|insert\w*|update\w*|destroy|remove|upsert|bulk_create"
@@ -25,7 +25,8 @@ DB_WRITE = re.compile(r"\.(?:add|add_all|commit|delete|save|create|insert\w*|upd
 OWNER = re.compile(r"current_user|req\.user|request\.user|g\.user|session\[['\"]user|get_jwt_identity|auth\.uid|getServerSession")
 NO_AUTH_PATHS = re.compile(r"(?:^|/)(?:login|signin|signup|register|logout|health|healthz|webhooks?|auth|callback)(?:/|$)", re.I)
 _PARAM = re.compile(r"<(?:\w+:)?(\w+)>|\{(\w+)(?::[^}]*)?\}|:(\w+)")
-_LOOKUP = r"\.(?:get|get_or_404|filter_by|filter|where|execute|query|find\w*|first_or_404|select|fetch\w*|scalar\w*)\s*\([^;]*?\b{}\b"
+_LOOKUP = (r"(?:\.(?:get|get_or_404|filter_by|filter|where|execute|query|find\w*|first_or_404|select|fetch\w*|scalar\w*)"
+           r"|\bget_object_or_404)\s*\([^;]*?\b{}\b")
 
 
 class RoutesAnalyzer(Analyzer):
@@ -37,7 +38,7 @@ class RoutesAnalyzer(Analyzer):
         return bool(FRAMEWORKS & set(ctx.profile.frameworks))
 
     def run(self, ctx) -> AnalyzerResult:
-        hits, failed = [], 0
+        hits, failed, python_files = [], 0, {}
         for path in ctx.text_files():
             lang = language(path)
             if lang == "python":
@@ -45,6 +46,7 @@ class RoutesAnalyzer(Analyzer):
                 if tree is None:
                     failed += 1
                     continue
+                python_files[path] = (ctx.text(path), tree)
                 found = python.routes(path, ctx.text(path), tree)
             elif lang in ("javascript", "typescript"):
                 found = express.routes(path, ctx.text(path))
@@ -52,6 +54,8 @@ class RoutesAnalyzer(Analyzer):
                 continue
             for route in found:
                 hits += judge(route)
+        for route in django.routes(python_files) if "django" in ctx.profile.frameworks else []:
+            hits += judge(route)
         if failed:
             return AnalyzerResult(hits, "partial", f"Python 파일 {failed}개를 해석하지 못함")
         return AnalyzerResult(hits)

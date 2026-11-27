@@ -26,8 +26,9 @@ _UNSUPPORTED = (".php", ".rb", ".go", ".java", ".kt", ".cs")
 _CODE = (".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx") + _UNSUPPORTED
 _ROUTE = re.compile(r"@\w+\.(route|get|post|put|patch|delete)\(|\b(app|router)\.(get|post|put|patch|delete|all)\("
                     r"|@(Get|Post|Put|Patch|Delete|Request)Mapping|export\s+(async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)\b"
-                    r"|\bRoute::|HandleFunc\(|\bdef\s+\w+\(request\b")
-_SINK = re.compile(r"execute(script)?\(|\.raw\(|subprocess|os\.(system|popen)|render_template_string|Markup\("
+                    r"|\bRoute::|HandleFunc\(|\bdef\s+\w+\((self,\s*)?request\b")   # Django 함수·클래스 view
+_SINK = re.compile(r"execute(script)?\(|\.raw\(|\.extra\(|RawSQL\(|subprocess|os\.(system|popen)|render_template_string"
+                   r"|Markup\(|mark_safe\("
                    r"|\bopen\(|send_file|\$queryRawUnsafe|child_process|innerHTML")
 # (키, 검사 범위 행, 검토 관점, 라우트 파일에서만, 단서). 앞에 있을수록 먼저 고른다 (AI.md §7: 결제·인가·인증 순)
 AREAS = [

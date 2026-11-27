@@ -94,7 +94,7 @@ post-commit hook은 사용자가 쓰는 명령이 아니라 **설치된 패키�
 ┌─────────────────────────────────────────────┐
 │  2. Inventory (정찰)                         │
 │  - 언어 통계, 프레임워크 (Flask·FastAPI·     │
-│    Express·Next.js·Spring)                  │
+│    Django·Express·Next.js·Spring)           │
 │  - 라우트 목록 (메서드·경로·핸들러·가드 단서)│
 │  - 설정·매니페스트·BaaS 파일·LLM SDK·        │
 │    에이전트 설정 파일                        │
