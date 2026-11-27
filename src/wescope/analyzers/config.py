@@ -51,13 +51,22 @@ class ConfigAnalyzer(Analyzer):
         return "python" in ctx.profile.languages
 
     def run(self, ctx) -> AnalyzerResult:
-        hits, failed = [], 0
+        hits, failed, assigned, settings = [], 0, set(), []
         for path in ctx.text_files(".py"):
             tree = ctx.python_ast(path)
             if tree is None:
                 failed += 1
                 continue
             hits += _check(ctx, path, tree)
+            names = {_name(t) for node in tree.body if isinstance(node, ast.Assign) for t in node.targets}
+            assigned |= names
+            if "ROOT_URLCONF" in names:
+                settings.append(path)
+        # Django는 쿠키 Secure 기본값이 False라 '안 쓴 것'이 곧 누락이다. 나눠 둔 settings(base·prod) 어디에도 없을 때만
+        missing = [n for n in ("SESSION_COOKIE_SECURE", "CSRF_COOKIE_SECURE") if n not in assigned]
+        if settings and missing:
+            hits.append(RawHit("config-cookie-flags", min(settings), 0, evidence=f"{', '.join(missing)} 설정 없음 (Django 기본값 False)",
+                               extra={"cwe": "CWE-614", "kind": ",".join(missing)}))
         if failed:
             return AnalyzerResult(hits, "partial", f"Python 파일 {failed}개를 해석하지 못함")
         return AnalyzerResult(hits)

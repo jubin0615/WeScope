@@ -54,3 +54,23 @@
     // 수정 후
     router.post("/posts", requireAuth, async (req, res) => { await Post.create({ ...req.body, userId: req.user.id }) })
   limitations_ko: "상위 미들웨어·게이트웨이의 인증은 보지 못했어요."
+
+- id: authz-csrf-exempt
+  category: WS-02
+  cwe: CWE-352
+  severity: MEDIUM
+  confidence: Potential
+  title_ko: "다른 사이트가 로그인한 사용자 몰래 이 요청을 보낼 수 있어 보여요"
+  tech_name_ko: "CSRF 보호 해제 (csrf_exempt)"
+  why_ko: "CSRF 확인을 끈 쓰기 요청은 사용자가 악성 사이트를 열기만 해도 그 사용자의 쿠키로 대신 보내져요. 비밀번호 변경·송금·삭제가 몰래 일어날 수 있어요."
+  fix_ko: "@csrf_exempt를 지우고 폼에는 {% csrf_token %}, fetch에는 X-CSRFToken 헤더를 넣으세요. 외부 서비스가 부르는 웹훅이면 서명 검증으로 대신하세요."
+  avoid_ko: "프론트엔드에서 토큰 넣기가 번거롭다는 이유로 끄지 마세요."
+  fix_example: |
+    # 수정 전
+    @csrf_exempt
+    def change_email(request): ...
+    # 수정 후
+    @login_required
+    @require_POST
+    def change_email(request): ...   # 템플릿 폼에 {% csrf_token %}
+  limitations_ko: "쿠키 대신 Authorization 헤더 토큰으로만 인증하는 API라면 CSRF 위험이 없을 수 있어요. 인증 방식은 확인하지 않았어요."

@@ -8,7 +8,7 @@ M1_RULES = {
     "secret-frontend-env": "A01:2025", "secret-client-bundle": "A07:2025", "secret-infra-config": "A07:2025",
     "secret-dev-tool": "A07:2025", "secret-data-file": "A01:2025", "secret-doc": "A07:2025", "git-hygiene": None,
     "authz-admin-route": "A01:2025", "authz-idor": "A01:2025", "authz-no-auth-write": "A07:2025",
-    "authz-jwt-no-verify": "A04:2025",
+    "authz-jwt-no-verify": "A04:2025", "authz-csrf-exempt": "A01:2025",
     "inject-sql": "A05:2025", "inject-code": "A05:2025", "inject-command": "A05:2025", "inject-xss": "A05:2025",
     "inject-xss-template": "A05:2025", "inject-path": "A01:2025", "inject-ssrf": "A01:2025",
     "inject-deserialize": "A08:2025", "inject-upload": "A06:2025", "inject-open-redirect": "A01:2025",

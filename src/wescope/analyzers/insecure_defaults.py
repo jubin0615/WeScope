@@ -17,7 +17,8 @@ _RULES = [
         r"|\b(?:err|error|e|ex)\.(?:stack|message)\b)")),
     ("config-fail-open", re.compile(r"catch\s*(?:\(\s*\w*\s*\))?\s*\{\s*(?:return\s+)?next\(\s*\)")),
 ]
-_WEAK_HASH = re.compile(r"hashlib\.(?:md5|sha1)\(|createHash\(\s*['\"](?:md5|sha1)['\"]", re.I)
+_WEAK_HASH = re.compile(r"hashlib\.(?:md5|sha1)\(|createHash\(\s*['\"](?:md5|sha1)['\"]"
+                        r"|\b(?:Unsalted)?(?:MD5|SHA1)PasswordHasher\b|\bCryptPasswordHasher\b", re.I)   # Django PASSWORD_HASHERS
 _PASSWORD_WORD = re.compile(r"passw|pwd", re.I)
 _TODO = re.compile(r"(?:#|//|/\*|\*)\s*.*\b(?:TODO|FIXME|HACK)\b.*(?:auth|login|permission|csrf|saniti|verify|password"
                    r"|secret|token|security|권한|인증|검증|보안)", re.I)

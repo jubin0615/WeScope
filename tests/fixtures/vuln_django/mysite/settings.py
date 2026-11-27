@@ -11,6 +11,11 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 # expect: config-cookie-flags
 SESSION_COOKIE_SECURE = False
+# CSRF_COOKIE_SECURE는 아예 없다 → 파일 단위 config-cookie-flags (Django 기본값 False)
+PASSWORD_HASHERS = [
+    # expect: config-weak-hash
+    "django.contrib.auth.hashers.MD5PasswordHasher",
+]
 
 # expect: secret-hardcoded
 STRIPE_API_KEY = "{{FAKE:stripe}}"

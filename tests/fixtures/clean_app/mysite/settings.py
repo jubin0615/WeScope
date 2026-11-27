@@ -6,8 +6,10 @@ DEBUG = os.environ.get("DJANGO_DEBUG") == "1"
 ALLOWED_HOSTS = ["shop.example.com"]
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher", "django.contrib.auth.hashers.PBKDF2PasswordHasher"]
 
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY")
 
 INSTALLED_APPS = ["django.contrib.admin", "django.contrib.auth", "rest_framework", "shop"]
 ROOT_URLCONF = "mysite.urls"
+REST_FRAMEWORK = {"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"]}

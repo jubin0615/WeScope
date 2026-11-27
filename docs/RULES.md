@@ -66,12 +66,13 @@
 | `authz-admin-route` | `/admin`·`/internal`·`/manage`·`/dashboard/admin` 라우트에 관리자 확인(`is_admin`, `role == "admin"`, `@admin_required`, `requireRole`) 단서 없음. 로그인 확인만 있어도 후보 | HIGH | P | CWE-862 | A01 | M1 |
 | `authz-idor` | 경로 파라미터(`<id>`, `{id}`, `:id`) + 그 값으로 DB 조회 + 소유자 조건(`user_id == current_user.id`, `where: { userId }`) 없음 | HIGH | P | CWE-639 | A01 | M1 |
 | `authz-no-auth-write` | POST·PUT·PATCH·DELETE + DB 쓰기 + 인증 가드·전역 인증 미들웨어 단서 없음. `/login`, `/signup`, `/health`, `/webhook` 제외 | HIGH | P | CWE-306 | A07 | M1 |
+| `authz-csrf-exempt` | POST·PUT·PATCH·DELETE 라우트에 Django `@csrf_exempt`(`method_decorator` 포함)·Flask-WTF `@csrf.exempt`. `/webhook`·`/callback` 등 외부 호출 경로 제외 | MEDIUM | P | CWE-352 | A01 | B9 |
 | `authz-jwt-no-verify` | `jwt.decode(..., options={"verify_signature": False})`, `algorithms=["none"]`, JS `jwt.decode()`만 쓰고 `jwt.verify()` 없음 | HIGH | L | CWE-347 | A04 | M1 |
 | `authz-next-handler` | Next.js `app/**/route.ts`의 `GET/POST…` export, Server Action(`"use server"`)에 `auth()`·`getServerSession`·`currentUser` 단서 없음 | HIGH | P | CWE-862 | A01 | M4 |
 | `authz-spring-policy` | Spring MVC 관리자 경로를 `SecurityFilterChain` 첫 일치 규칙·`@PreAuthorize`와 대조 (기존 구현 이식) | HIGH | P | CWE-862 | A01 | M4 |
 
-**지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Django(`urls.py`의 `path`·`re_path`·`include` → 함수 view·클래스 view 메서드, 가드 `@login_required`·`@permission_required`·`@user_passes_test`·`@staff_member_required`·`LoginRequiredMixin`·DRF `permission_classes`(클래스 이름으로 판정: `IsAuthenticated`는 로그인, `IsAdminUser`는 관리자, `AllowAny`는 가드 아님)·settings `MIDDLEWARE`에 들어 있는 `LoginRequiredMiddleware`, 한 view가 여러 URL에 걸리면 URL마다 판정, 메서드는 `@require_POST`·`@require_http_methods`·`@api_view`·본문의 `request.method`/`request.POST`로 추정) — B9 / Next.js App Router — M4 / Spring MVC — M4.
-**한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P. Django는 DRF router(ViewSet)와 메서드를 직접 정의하지 않은 제네릭 뷰(`DetailView` 등)를 아직 라우트로 보지 않는다.
+**지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Django(`urls.py`의 `path`·`re_path`·`include` → 함수 view·클래스 view 메서드, 가드 `@login_required`·`@permission_required`·`@user_passes_test`·`@staff_member_required`·`LoginRequiredMixin`·DRF `permission_classes`(클래스 이름으로 판정: `IsAuthenticated`는 로그인, `IsAdminUser`는 관리자, `AllowAny`는 가드 아님)·settings `MIDDLEWARE`에 들어 있는 `LoginRequiredMiddleware`, 한 view가 여러 URL에 걸리면 URL마다 판정, DRF `router.register` ViewSet(`list`·`create`·`retrieve`·`update`·`destroy`·`@action`)과 상속받은 동작으로 일하는 제네릭 뷰(`DetailView`·`UpdateView`·`DeleteView`·`CreateView`·`ListView`, DRF `generics.*APIView`·`ModelViewSet`)는 `get_queryset`·`queryset`과 상속받은 조회·저장·삭제로 판정, 저장소 안의 부모 클래스에 둔 권한도 물려받음, settings `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`(없으면 DRF 기본값 AllowAny), 메서드는 `@require_POST`·`@require_http_methods`·`@api_view`·본문의 `request.method`/`request.POST`로 추정) — B9 / Next.js App Router — M4 / Spring MVC — M4.
+**한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P. 관리자 단서 중 `is_staff=True`·`is_admin=True`처럼 값을 넣는 인자와 `create_superuser()`는 확인으로 보지 않는다. Django는 `path()`에 `ViewSet.as_view({...})`로 직접 건 ViewSet을 아직 라우트로 보지 않는다.
 
 ---
 
@@ -131,9 +132,9 @@
 | `config-allowed-hosts` | Django `ALLOWED_HOSTS = ["*"]` | MEDIUM | L | — | — | M1 |
 | `config-cors-wildcard` | `CORS(app)` 기본값, `origins="*"`, `cors({ origin: '*' })`, `CORS_ALLOW_ALL_ORIGINS = True` | MEDIUM | L | CWE-942 | A02 | M1 |
 | `config-cors-credentials` | `*` 또는 요청 Origin 그대로 반사 **+** `supports_credentials=True` / `credentials: true` | HIGH | L | CWE-942 | A02 | M1 |
-| `config-cookie-flags` | 세션·인증 쿠키에 `Secure`·`HttpOnly`·`SameSite` 누락 (`SESSION_COOKIE_SECURE = False`, `res.cookie(..)` 옵션 누락) | MEDIUM | L | CWE-614 / 1004 / 1275 | A02 / A02 / A01 | M1 |
+| `config-cookie-flags` | 세션·인증 쿠키에 `Secure`·`HttpOnly`·`SameSite` 누락 (`SESSION_COOKIE_SECURE = False`, `res.cookie(..)` 옵션 누락, Django settings 어디에도 `SESSION_COOKIE_SECURE`·`CSRF_COOKIE_SECURE`가 없음 — 기본값 False라 파일 단위 발견) | MEDIUM | L | CWE-614 / 1004 / 1275 | A02 / A02 / A01 | M1 |
 | `config-weak-secret` | `SECRET_KEY`·`JWT_SECRET`·`SESSION_SECRET`가 32자 미만 고정값 또는 `secret`·`changeme`·`dev` 같은 기본값, Django `startproject`의 `django-insecure-` 키 | HIGH | L | CWE-321 | A04 | M1 |
-| `config-weak-hash` | 비밀번호 문맥의 `hashlib.md5`·`sha1`, `crypto.createHash('md5')` | MEDIUM | P | CWE-328 | A04 | M1 |
+| `config-weak-hash` | 비밀번호 문맥의 `hashlib.md5`·`sha1`, `crypto.createHash('md5')`, Django `PASSWORD_HASHERS`의 `MD5`·`SHA1`·`Unsalted*`·`Crypt` hasher | MEDIUM | P | CWE-328 | A04 | M1 |
 | `config-tls-verify-off` | `verify=False`, `rejectUnauthorized: false`, `NODE_TLS_REJECT_UNAUTHORIZED=0` | MEDIUM | L | CWE-295 | A07 | M1 |
 | `config-default-credential` | 로그인 비교·시드의 `admin`/`admin`, `admin`/`password`, `root`/`root` | HIGH | L | CWE-1392 | A07 | M1 |
 | `config-error-exposure` | `traceback.format_exc()`·`str(e)`·`err.stack`을 응답으로 반환 | MEDIUM | L | CWE-209 | A10 | M1 |

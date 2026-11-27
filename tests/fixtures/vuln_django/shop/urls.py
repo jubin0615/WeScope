@@ -1,6 +1,12 @@
-from django.urls import path, re_path
+from django.urls import include, path, re_path
+from rest_framework.routers import DefaultRouter
 
-from . import api, views
+from . import api, generic, views
+
+router = DefaultRouter()
+router.register(r"orders", generic.OrderViewSet, basename="order")
+router.register(r"manage/users", generic.UserViewSet)
+router.register(r"comment-import", generic.CommentImportViewSet, basename="comment-import")
 
 app_name = "shop"
 urlpatterns = [
@@ -25,4 +31,10 @@ urlpatterns = [
     path("api/orders/<int:pk>/note/", api.order_note),
     path("staff/", views.staff_list),            # 같은 view를 관리자 경로에도 건다
     path("manage/staff/", views.staff_list),
+    path("orders/<int:pk>/view/", generic.OrderDetailView.as_view()),
+    path("comments/<int:pk>/delete/", generic.CommentDeleteView.as_view()),
+    path("api/v2/orders/<int:pk>/", generic.OrderUpdateAPI.as_view()),
+    path("api/", include(router.urls)),
+    path("account/email/", views.change_email),
+    path("webhooks/stripe/", views.stripe_webhook),
 ]

@@ -15,6 +15,7 @@ from django.shortcuts import get_object_or_404, render
 from django.template import Context, Template
 from django.utils.safestring import mark_safe
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .models import Comment, Order, Product
@@ -118,7 +119,22 @@ def add_comment(request):
 # expect: authz-admin-route
 @login_required
 def staff_list(request):
-    return JsonResponse({"staff": list(User.objects.values_list("username", flat=True))})
+    return JsonResponse({"staff": list(User.objects.filter(is_staff=True).values_list("username", flat=True))})
+
+
+# expect: authz-csrf-exempt
+@csrf_exempt
+@login_required
+def change_email(request):
+    request.user.email = request.POST["email"]
+    request.user.save()
+    return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@require_POST
+def stripe_webhook(request):      # 웹훅은 외부 서비스가 부르므로 CSRF 해제가 정상
+    return JsonResponse({"received": True})
 
 
 class UserDeleteView(LoginRequiredMixin, View):
