@@ -22,6 +22,8 @@ export function groups(findings, tab, severity = null) {
   return [...byRule.values()].map((g) => ({
     ...g,
     severity: SEVERITIES.find((s) => g.findings.some((f) => f.severity === s)),
+    // 수정안은 규칙마다 하나(서버가 열린 대표 발견에 붙임). 심각도 거르기로 대표가 빠져도 보이게 전체 발견에서 찾는다
+    fix: findings.find((f) => f.rule_id === g.rule_id && open(f) && f.fix)?.fix ?? null,
   }));
 }
 
@@ -49,12 +51,20 @@ export function tags(group, tab, firstScan) {
 }
 
 export const TAG_CLASS = { NEW: "tag-new", AI: "tag-ai", "AI 확인": "tag-ai" };
+// 수정안 검증 상태 (DASHBOARD.md §6-1): [목록 행, 상세 머리, 색]
+export const VERIFY = {
+  verified: ["✓ 검증됨", "✓ 검증됨 — 적용·문법·재검사를 통과했어요", "icon-good"],
+  partial: ["◐ 문법 확인", "◐ 문법 확인 — 적용·문법은 통과했지만 재검사로는 확인하지 못했어요", "icon-warn"],
+  failed: ["✕ 검증 안 됨", "✕ 검증 안 됨 — 참고용이에요", "icon-muted"],
+};
+export const groupFix = (group) => group.fix ?? null;
 const shorten = (text, max = 44) => (text.length > max ? `…${text.slice(-(max - 1))}` : text);
 
 export function renderList(el, { list, tab, selected, firstScan, onSelect }) {
   el.replaceChildren(...list.map((g) => {
     const first = g.findings[0];
     const more = g.findings.length - 1;
+    const [verify, , tone] = VERIFY[groupFix(g)?.verification] ?? [];
     const row = h("button", { type: "button", className: "row", ariaPressed: String(g.rule_id === selected) },
       h("span", { className: sevClass(g.severity), textContent: g.severity }),
       h("span", { className: "row-title", textContent: first.tech_name_ko }),
@@ -62,7 +72,8 @@ export function renderList(el, { list, tab, selected, firstScan, onSelect }) {
         more > 0 && h("span", { className: "row-count", textContent: `${g.findings.length}곳` }),
         ...tags(g, tab, firstScan).map((t) => h("span", { className: `tag ${TAG_CLASS[t] || ""}`, textContent: t }))),
       h("span", { className: "row-where", title: where(first),
-        textContent: shorten(where(first)) + (more > 0 ? ` 외 ${more}곳` : "") }));
+        textContent: shorten(where(first)) + (more > 0 ? ` 외 ${more}곳` : "") }),
+      verify && h("span", { className: `row-verify ${tone}`, textContent: verify }));
     row.addEventListener("click", () => onSelect(g.rule_id));
     return row;
   }));

@@ -91,15 +91,22 @@ def fix_group(repo_id: str, scan_id: str, rule_id: str, *, retry=False, progress
         raise LLMError("ChatGPT에 연결하지 않았어요", "login")
     repo = history.get_repo(repo_id)
     result = results.load(repo_id, scan_id)
-    group = next((g for g in fixer.groups(result.findings) if g[0].rule_id == rule_id), None)
+    ignored = history.ignored(repo_id)   # 오탐으로 표시한 위치는 다음 검사 전에도 고치라고 보내지 않는다
+    group = next((g for g in fixer.groups(result.findings, skip=lambda f: f.fingerprint in ignored)
+                  if g[0].rule_id == rule_id), None)
     if repo is None or group is None:
         raise KeyError(f"수정할 위험 후보가 없어요: {rule_id}")
-    rejected = group[0].fix["diff"] if retry and group[0].fix else None
+    # 오탐 표시로 대표 발견이 바뀌었을 수 있다: 이전 수정안은 그 규칙의 어느 발견에 있든 찾아 넘기고, 새 수정안 하나만 남긴다
+    same = [f for f in result.findings if f.rule_id == rule_id]
+    previous = next((f.fix for f in same if f.fix), None)
+    rejected = previous["diff"] if retry and previous else None
     progress("ai", task="fix", done=0, total=1)
     with collect(Target(repo["kind"], repo["location"], repo["branch"], tuple(repo["excludes"]))) as ctx:
         run_all(ctx, [a for a in analyzers() if a.id == "secrets"])   # 보내기 전에 가릴 비밀값을 다시 찾는다
         rescan = _rescanner(result.analyzers, ctx.source["git"])
-        group[0].fix = fixer.make_fix(Session(client), ctx, group, result.findings, rescan, rejected=rejected)
+        fix = fixer.make_fix(Session(client), ctx, group, result.findings, rescan, rejected=rejected)
+    for f in same:
+        f.fix = fix if f is group[0] else None
     progress("save")
     with scan_lock():
         results.save(result)

@@ -54,6 +54,7 @@ def test_ticket_becomes_cookie_and_is_required():
         names = c.get("/api/catalog").json()
         assert [w["code"] for w in names["ws"]] == [f"WS-{i:02}" for i in range(1, 11)] and names["ws"][4]["name_ko"] == "입력값 주입"
         assert [o["code"] for o in names["owasp"]][:2] == ["A01:2025", "A02:2025"] and names["owasp"][4]["name"] == "Injection"
+        assert {"id": "inject-sql", "tech_name_ko": "SQL 인젝션 (문자열 결합 쿼리)"} in names["rules"]
         assert c.get("/static/app.css").headers["content-type"].startswith("text/css")
         assert c.get("/static/fonts/PretendardVariable.woff2").status_code == 200
         assert c.get("/static/%2e%2e/server/app.py").status_code == 404           # web/ 밖은 못 읽음
@@ -257,6 +258,9 @@ def test_fix_api_attaches_fix_to_latest_scan(client, tmp_path, monkeypatch):
                        if p["rule"]["rule_id"] == "config-weak-secret" else answer("x"))
     monkeypatch.setattr("wescope.llm.client.connected", lambda: fake)
     assert client.post(f"/api/scans/{first}/groups/no-such-rule/fix").status_code == 404
+    debug = next(f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "config-debug")
+    client.post(f"/api/repos/{added['repo']['id']}/ignores", json={"fingerprint": debug["fingerprint"]})
+    assert client.post(f"/api/scans/{first}/groups/config-debug/fix").status_code == 404   # 오탐 표시한 묶음 (다음 검사 전)
     started = client.post(url)
     assert started.status_code == 202 and started.json() == {"scan_id": first}
     kind, job = wait(client, first)[-1]
@@ -264,7 +268,25 @@ def test_fix_api_attaches_fix_to_latest_scan(client, tmp_path, monkeypatch):
     fixed = next(f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "config-weak-secret")
     assert fixed["fix"]["verification"] == "verified"
 
+    # 묶음 안에서 오탐으로 표시한 위치는 다음 검사 전에도 ChatGPT에 고치라고 보내지 않는다
+    secrets = [f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "secret-hardcoded"]
+    assert len(secrets) >= 2
+    client.post(f"/api/scans/{first}/groups/secret-hardcoded/fix")        # 오탐 표시 전 수정안: 첫 발견에 붙는다
+    wait(client, first)
+    client.post(f"/api/repos/{added['repo']['id']}/ignores", json={"fingerprint": secrets[0]["fingerprint"]})
+    client.post(f"/api/scans/{first}/groups/secret-hardcoded/fix", json={"retry": True})
+    wait(client, first)
+    sent = fake.requests[-1]
+    assert secrets[0]["location"]["line"] not in [loc["line"] for loc in sent["locations"]]
+    assert secrets[1]["location"]["line"] in [loc["line"] for loc in sent["locations"]]
+    assert sent["rejected_diff"] == "x"                                          # 대표가 바뀌어도 [다른 수정안]은 이전 diff를 넘긴다
+    # 대표가 바뀌어도 그 규칙의 수정안은 하나: 화면이 옛 수정안을 계속 보이지 않게
+    now = [f for f in client.get(f"/api/scans/{first}").json()["findings"] if f["rule_id"] == "secret-hardcoded"]
+    assert [f["fingerprint"] for f in now if f["fix"]] == [secrets[1]["fingerprint"]]
+
     again = client.post("/api/scans", json={"repo_id": added["repo"]["id"]}).json()["scan_id"]   # AI 연결 후 검사
+    busy = client.post(f"/api/scans/{first}/groups/config-cors-credentials/fix")   # 검사가 끝나면 first는 최신이 아니게 된다
+    assert busy.status_code == 409 and "검사가 끝난 뒤" in busy.json()["detail"]
     wait(client, again)
     assert client.get(f"/api/scans/{again}").json()["ai"]["fixes"]["verified"] == 1   # HIGH 묶음 자동 생성
     assert client.post(url).status_code == 409                          # 예전 검사에는 만들지 않는다

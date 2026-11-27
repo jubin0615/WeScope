@@ -7,6 +7,7 @@ import { renderTabs } from "./components/tabs.js";
 import { TABS, groups, tabCounts, keepSelection, renderList } from "./components/list.js";
 import { renderDetail } from "./components/detail.js";
 import { renderCoverage } from "./components/coverage.js";
+import { openSettings } from "./components/settings.js";
 
 const root = document.getElementById("app");
 const OFFLINE = "서버와 연결이 끊겼어요. 터미널에서 wescope를 다시 실행하세요.";
@@ -20,7 +21,9 @@ const EMPTY = {
 
 const state = {
   repos: [], repoId: null, result: null, jobs: {}, failed: null, offline: false, selected: null, latestScan: null, auth: null,
-  names: { ws: {}, owasp: {} },   // GET /api/catalog: 코드값 → 이름. 못 받으면 코드만 보인다
+  names: { ws: {}, owasp: {}, rules: {} },   // GET /api/catalog: 코드값 → 이름. 못 받으면 코드만 보인다
+  ignores: {},      // 이 프로젝트의 오탐 표시: 지문 → {reason, created_at} (GET /api/repos/{id}/ignores)
+  settings: { theme: "system", ai_level: "deep", ai_on_hook: false },   // GET /api/settings
   ...loadView(),
 };
 const parts = {};     // 다시 그릴 때 유지하는 영역 (목록 스크롤 위치 보존)
@@ -77,7 +80,7 @@ function renderTop() {
     { repos: state.repos, repo: repo(), result: state.result, job: jobHere(), failed: state.failed, offline: state.offline,
       auth: state.auth },
     { selectRepo: (id) => guard(() => selectRepo(id)), addRepo, rescan: () => guard(rescan), openCoverage: () => setTab("coverage"),
-      connectChatGPT });
+      connectChatGPT, openSettings: settings });
 }
 
 // 새 탭은 누르는 순간 열어야 팝업 차단을 피한다. 승인 주소를 받은 뒤 그 탭을 보낸다 (OpenAI 쪽이 이 창을 건드리지 못하게 opener를 끊는다)
@@ -100,6 +103,19 @@ async function refreshAuth() {
   if (JSON.stringify(auth) === JSON.stringify(state.auth)) return false;
   state.auth = auth;
   return true;
+}
+
+function settings(tab) {
+  openSettings({ api, tab, repo: repo(), auth: state.auth, settings: state.settings, rules: state.names.rules, connectChatGPT,
+    onRepo: (changed) => { state.repos = state.repos.map((r) => (r.id === changed.id ? changed : r)); },
+    onSettings: (saved) => { state.settings = saved; },
+    onAuth: async () => { await refreshAuth(); renderTop(); return state.auth; },
+    onRemoved: () => guard(async () => {
+      state.repos = await api("/api/repos");
+      Object.assign(state, { repoId: state.repos[0]?.id ?? null, result: null, failed: null, selected: null });
+      await loadResult();
+      render();
+    }) });
 }
 
 function firstScan() {
@@ -156,7 +172,8 @@ function renderPanes(list, tab) {
   renderList(parts.list, { list, tab, selected: shown, firstScan: !state.result.baseline_scan,
     onSelect: (ruleId) => { state.selected = ruleId; renderPanes(list, tab); } });
   renderDetail(parts.detail, { group: list.find((g) => g.rule_id === shown), tab, firstScan: !state.result.baseline_scan,
-    names: state.names, repo: repo(), result: state.result });
+    names: state.names, repo: repo(), result: state.result, ignores: state.ignores, busy: Boolean(jobHere() || state.offline),
+    actions: { makeFix, ignore, unignore } });
 }
 
 function setTab(tab) {
@@ -180,8 +197,40 @@ async function guard(action) {
 async function loadResult() {
   const id = state.repoId;
   const last = repo()?.last_scan;
-  const result = last ? await api(`/api/scans/${last.id}`) : null;
-  if (state.repoId === id) state.result = result;   // 기다리는 사이 다른 프로젝트를 골랐으면 버린다
+  const [result, ignores] = await Promise.all([last ? api(`/api/scans/${last.id}`) : null, id ? loadIgnores(id) : {}]);
+  if (state.repoId === id) Object.assign(state, { result, ignores });   // 기다리는 사이 다른 프로젝트를 골랐으면 버린다
+}
+
+const loadIgnores = async (repoId) =>
+  Object.fromEntries((await api(`/api/repos/${repoId}/ignores`)).map(({ fingerprint, ...rest }) => [fingerprint, rest]));
+
+// [오탐이에요]·[오탐 해제]: 다음 검사부터 결과에 반영된다. 지금은 표시 여부만 다시 읽어 상세에 보인다
+const ignore = (fingerprints, reason) => eachIgnore(fingerprints, (repoId, fingerprint) =>
+  api(`/api/repos/${repoId}/ignores`, { method: "POST", body: { fingerprint, reason } }));
+const unignore = (fingerprints) => eachIgnore(fingerprints, (repoId, fingerprint) =>
+  api(`/api/repos/${repoId}/ignores/${fingerprint}`, { method: "DELETE" }));
+
+// API는 지문 하나씩 받는다. 중간에 실패해도 이미 바뀐 것은 상태에 반영하고, 오류는 상세가 그 자리에 보인다
+// (실패했을 때 다시 그리면 그 오류 문장이 사라지므로 성공했을 때만 그린다)
+async function eachIgnore(fingerprints, request) {
+  const repoId = state.repoId;
+  let failure = null;
+  for (const fingerprint of fingerprints) {
+    try { await request(repoId, fingerprint); } catch (err) { failure = err; break; }
+  }
+  const ignores = await loadIgnores(repoId).catch(() => null);
+  if (ignores && state.repoId === repoId) state.ignores = ignores;
+  if (failure) throw failure;
+  render();
+}
+
+// [수정안 만들기]·[다른 수정안]: 같은 scan_id의 SSE로 진행을 보고, 끝나면 결과를 다시 읽는다
+async function makeFix(ruleId, retry) {
+  const repoId = state.repoId;
+  const { scan_id } = await api(`/api/scans/${state.result.scan_id}/groups/${encodeURIComponent(ruleId)}/fix`,
+    { method: "POST", body: { retry } });
+  watch({ scan_id, repo_id: repoId, status: "queued", stage: null, rule_id: ruleId });
+  render();
 }
 
 async function selectRepo(id) {
@@ -277,10 +326,11 @@ async function boot() {
     state.offline = false;
     state.latestScan = info.latest_scan;
     await refreshAuth();   // GET /api/auth: 상단 바 ChatGPT 상태
-    api("/api/settings").then((settings) => window.setTheme(settings.theme), () => {});
+    api("/api/settings").then((saved) => { state.settings = saved; window.setTheme(saved.theme); }, () => {});
     const names = await api("/api/catalog").catch(() => null);
     if (names) state.names = { ws: Object.fromEntries(names.ws.map((w) => [w.code, w.name_ko])),
-      owasp: Object.fromEntries(names.owasp.map((o) => [o.code, o.name])) };
+      owasp: Object.fromEntries(names.owasp.map((o) => [o.code, o.name])),
+      rules: Object.fromEntries(names.rules.map((r) => [r.id, r.tech_name_ko])) };
     state.repos = info.repos ? await api("/api/repos") : [];
     state.repoId = info.running?.repo_id ?? info.last_repo ?? state.repos[0]?.id ?? null;
     await loadResult();

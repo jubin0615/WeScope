@@ -150,7 +150,7 @@ button, input { font: inherit; color: inherit; }
 .list-pane { padding: var(--s2); }
 .detail-pane { padding: var(--s6); }
 .empty { padding: var(--s6) var(--s4); }
-.row { display: grid; grid-template-columns: 72px 1fr auto; grid-template-areas: "sev title meta" ". where where";
+.row { display: grid; grid-template-columns: 72px 1fr auto; grid-template-areas: "sev title meta" ". where verify";
   gap: 2px var(--s2); width: 100%; padding: var(--s3); border: 0; border-left: 3px solid transparent; border-radius: var(--r-md);
   background: transparent; text-align: left; cursor: pointer; }
 .row:hover { background: var(--hover); }
@@ -159,6 +159,7 @@ button, input { font: inherit; color: inherit; }
 .row-title { grid-area: title; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-meta { grid-area: meta; display: flex; gap: var(--s2); align-items: baseline; }
 .row-count { font-size: 12px; color: var(--text-3); }
+.row-verify { grid-area: verify; font-size: 12px; white-space: nowrap; }
 .row-where { grid-area: where; font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail-title { margin: var(--s1) 0 var(--s2); font-size: 20px; font-weight: 650; }
 
@@ -218,3 +219,46 @@ table.coverage { width: 100%; border-collapse: collapse; font-size: 13px; }
 .chatgpt { font-size: 13px; white-space: nowrap; }
 .chatgpt-on { color: var(--accent); font-weight: 600; }
 .topbar .link.chatgpt { color: var(--text-3); }
+.topbar .link.chatgpt-on { color: var(--accent); text-decoration: none; }
+
+/* 수정안·AI 표시 (§6) */
+.verify { margin: 0 0 var(--s3); font-weight: 650; }
+.diff span { display: block; }
+.diff .diff-add { color: var(--diff-add); background: var(--diff-add-bg); }
+.diff .diff-remove { color: var(--diff-remove); background: var(--diff-remove-bg); }
+.diff .diff-file { color: var(--text-2); font-weight: 700; }
+.diff .diff-hunk { color: var(--text-3); }
+.prose-list { margin: 0; padding-left: 1.2em; line-height: 1.75; }
+.detail-head .notice-amber, .detail-head .notice-blue { margin-top: var(--s3); }
+.detail-actions { flex-wrap: wrap; }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+.btn-suggest { border-color: var(--accent-2); color: var(--accent-2); }
+.btn-danger { color: var(--sev-critical); border-color: var(--sev-critical); }
+.btn-small { min-height: 30px; padding: 0 var(--s3); font-size: 13px; }
+.ignore-form { margin-top: var(--s3); padding: var(--s4); border-radius: var(--r-md); background: var(--surface-2); }
+.ignore-form .field { margin-top: 0; }
+.picks { margin: var(--s3) 0 0; padding: 0; border: 0; }
+.picks legend { margin-bottom: var(--s1); font-size: 13px; font-weight: 600; color: var(--text-2); }
+.form-actions { display: flex; gap: var(--s2); margin-top: var(--s3); }
+textarea, select { width: 100%; padding: 8px var(--s3); border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); font: inherit; color: inherit; }
+textarea { font-family: var(--mono); font-size: 12px; resize: vertical; }
+.check { display: flex; gap: var(--s2); align-items: baseline; margin-top: var(--s2); cursor: pointer; }
+.ok { margin-top: var(--s2); color: var(--accent); font-size: 13px; }
+.small { font-size: 12px; }
+
+/* 설정 창 (§3-8) */
+.settings-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 var(--s4); white-space: nowrap; }
+.settings-icon { font-size: 20px; line-height: 1; color: var(--accent); }
+.settings { width: 640px; max-height: 80vh; overflow-y: auto; padding: var(--s6); background: var(--surface); color: var(--text); }
+.settings-head h2 { font-size: 18px; }
+.settings .detail-tabs { margin-top: var(--s4); }
+.settings-body h3 { margin: var(--s5) 0 var(--s2); font-size: 14px; }
+.settings-body .field { margin-top: 0; }
+.rule-list { margin: 0; padding: 0; list-style: none; }
+.rule-list li { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding: var(--s1) 0; }
+.inline { display: flex; gap: var(--s2); align-items: center; margin-top: var(--s2); }
+.inline select { flex: 1; }
+.send-table td { width: 50%; }
+.send-details { margin-top: var(--s3); }
+.send-details summary { cursor: pointer; font-weight: 600; }
+.send-details table { margin-top: var(--s2); background: var(--surface); border-radius: var(--r-sm); }

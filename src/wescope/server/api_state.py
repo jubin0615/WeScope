@@ -29,9 +29,10 @@ def state(request: Request):
 
 @router.get("/catalog")
 def names():
-    """결과 JSON은 코드값만 가진다. 화면은 이 이름을 붙인다 (DASHBOARD.md §8-1)."""
+    """결과 JSON은 코드값만 가진다. 화면은 이 이름을 붙인다 (DASHBOARD.md §8-1). rules는 설정 창의 꺼 둔 규칙 이름."""
     return {"ws": [{"code": a["code"], "name_ko": a["name_ko"]} for a in catalog.ws_areas()],
-            "owasp": [{"code": o["code"], "name": o["name"]} for o in catalog.owasp_top10()]}
+            "owasp": [{"code": o["code"], "name": o["name"]} for o in catalog.owasp_top10()],
+            "rules": [{"id": r["id"], "tech_name_ko": r["tech_name_ko"]} for r in catalog.rules().values()]}
 
 
 @router.get("/settings")

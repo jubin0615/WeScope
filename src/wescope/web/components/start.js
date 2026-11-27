@@ -1,5 +1,6 @@
 // 시작 화면: 폴더 경로 / GitHub 주소 중 하나를 받아 POST /api/repos (DASHBOARD.md §3-1).
 import { h } from "../dom.js";
+import { sendTable } from "./settings.js";
 
 // 입력 칸 값 → 요청 본문. 둘 중 하나만 채워야 한다. 형식 검사(폴더 존재·GitHub 주소)는 서버가 한다.
 export function target(path, github, branch) {
@@ -36,7 +37,8 @@ export function renderStart(root, { api, onStarted }) {
         h("li", { className: "yes", textContent: "검사는 이 PC 안에서만 해요. 코드를 밖으로 보내지 않아요." }),
         h("li", { className: "yes", textContent: "원본 폴더는 읽기만 하고 고치지 않아요." }),
         h("li", { textContent: "GitHub 주소는 이 PC로 내려받은 뒤 검사해요." }),
-        h("li", { textContent: "ChatGPT 분석은 나중에 직접 켰을 때만 써요. 보내는 것은 설정 창에서 확인할 수 있어요." }))));
+        h("li", { textContent: "ChatGPT 분석은 나중에 직접 켰을 때만 써요. 보내는 것은 설정 창에서 확인할 수 있어요." })),
+      h("details", { className: "send-details" }, h("summary", { textContent: "자세히" }), sendTable())));
 
   let busy = false;   // 요청 중에는 입력을 고쳐도 버튼을 다시 켜지 않는다 (두 번 등록 방지)
   const show = (message) => { error.textContent = message || ""; error.hidden = !message; };

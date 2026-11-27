@@ -366,7 +366,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `GET /healthz` (티켓 불필요) | `{"app": "wescope", "pid": 1234}` | — |
 | `GET /auth/callback` (B8, 티켓 불필요) | OpenAI 승인 뒤 브라우저가 돌아오는 곳. 처음 연결이면 등록 결과(`client_id`)를 저장하고 `303 →` 로그인 승인 주소, 로그인이면 code를 토큰으로 바꿔 저장하고 "연결했어요" 페이지. SameSite=Strict 쿠키가 실리지 않는 요청이라 티켓 대신 이번 시도의 `state`(1회용, 5분)·PKCE·nonce로 확인 | 400 페이지 (state 불일치·만료, 승인 거절, 계정 확인 실패) |
 | `GET /api/state` | `{"repos": 2, "last_repo": "<repo_id>" \| null, "running": Job \| null, "latest_scan": "<scan_id>" \| null}` — `latest_scan`(B7)은 모든 저장소 중 마지막 검사. 화면은 5초마다 확인해 처음 보는 `running`은 SSE로 지켜보고, `latest_scan`이 바뀌면 목록·결과를 다시 읽는다 (커밋 자동 검사를 알림 없이 반영) | — |
-| `GET /api/catalog` (F3 추가) | `{"ws": [{"code": "WS-01", "name_ko": "비밀값 노출"}, …], "owasp": [{"code": "A01:2025", "name": "Broken Access Control"}, …]}` — 화면이 코드값에 붙이는 이름 | — |
+| `GET /api/catalog` (F3 추가, `rules`는 F4) | `{"ws": [{"code": "WS-01", "name_ko": "비밀값 노출"}, …], "owasp": [{"code": "A01:2025", "name": "Broken Access Control"}, …], "rules": [{"id": "inject-sql", "tech_name_ko": "SQL 인젝션 (문자열 결합 쿼리)"}, …]}` — 화면이 코드값에 붙이는 이름 (`rules`는 설정 창 "꺼 둔 규칙") | — |
 | `GET /api/repos` | `[Repo, …]` | — |
 | `POST /api/repos` `{"path": "…"}` 또는 `{"github": "https://github.com/o/r", "branch"?: "…"}` (+ `"name"?`) | `201 {"repo": Repo, "scan_id": "…"}` — 바로 첫 검사를 큐에 넣음 | 400 (둘 다/둘 다 없음, 없는 폴더, GitHub 형식 아님) |
 | `DELETE /api/repos/{id}` | `204` — 이력·결과 JSON·전용 clone 삭제 | 404, 409 (검사 중) |
@@ -387,7 +387,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `GET /api/auth` (B8) | `{"state": "login"\|"plan"\|"ready", "message"}` — 저장된 토큰만 보고 네트워크는 쓰지 않는다. `plan`은 구독 사용 승인이 없음. 마지막 연결 시도가 실패했으면 그 이유가 `message` | — |
 | `POST /api/auth/login` (B8) | `{"url": "https://auth.openai.com/…"}` — 화면이 새 탭으로 연다. 다시 부르면 앞 시도는 무효 | — |
 | `POST /api/auth/logout` (B8) | `204` — 이 PC의 토큰만 지운다 (등록·ChatGPT 쪽 앱 연결은 그대로) | — |
-| `POST /api/scans/{scan_id}/groups/{rule_id}/fix` `{"retry"?: bool}` (B8) | `202 {"scan_id"}` — [수정안 만들기]·`retry`면 [다른 수정안](지금 diff를 채택하지 않음으로 넘김). 작업 큐에서 지금 파일 기준으로 만들고 그 검사의 결과 JSON 대표 발견 `fix`에 붙여 다시 저장한다. 진행은 같은 `/api/scans/{scan_id}/events` (Job `rule_id`가 채워짐) | 404 (검사 없음, 그 규칙의 열린 발견 없음), 409 (가장 최근 검사가 아님, ChatGPT 연결 전) |
+| `POST /api/scans/{scan_id}/groups/{rule_id}/fix` `{"retry"?: bool}` (B8) | `202 {"scan_id"}` — [수정안 만들기]·`retry`면 [다른 수정안](지금 diff를 채택하지 않음으로 넘김). 작업 큐에서 지금 파일 기준으로 만들고 그 검사의 결과 JSON 대표 발견 `fix`에 붙여 다시 저장한다. 진행은 같은 `/api/scans/{scan_id}/events` (Job `rule_id`가 채워짐) | 404 (검사 없음, 그 규칙의 열린 발견 없음 — 오탐으로 표시한 발견은 다음 검사 전에도 뺀다), 409 (가장 최근 검사가 아님, ChatGPT 연결 전) |
 
 - **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "hook": bool | null, "last_scan": ScanSummary | null}` — `hook`(B7)은 hook 파일에서 바로 읽은 자동 검사 켜짐 여부, 로컬 Git 폴더가 아니거나 hook이 `.git` 밖이면 `null`. 로컬 Git 폴더는 연결할 때 켠다 (PRD P6 기본 켬)
 - **ScanSummary**: `{"id", "scanned_at", "trigger", "commit_sha", "baseline", "risk_score", "summary"}`
