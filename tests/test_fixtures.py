@@ -12,6 +12,8 @@ needs_semgrep = pytest.mark.skipif(not shutil.which("semgrep"), reason="semgrep 
 
 ZOO_COMMITTED = [".env", "serviceAccountKey.json", "app.db", ".gitignore", "README.md", "components", "config",
                  "docker-compose.yml", ".github", ".npmrc", "tests", ".env.example"]
+# 줄이 없는 발견 (설정이 아예 없음): CSRF_COOKIE_SECURE를 쓰지 않은 Django settings
+FILE_LEVEL = {"vuln_django": ["config-cookie-flags mysite/settings.py"]}
 ZOO_FILE_LEVEL = ["secret-env-file .env", "secret-env-file .env.local", "secret-credential-file serviceAccountKey.json",
                   "secret-data-file app.db", "git-hygiene .gitignore"]
 
@@ -31,7 +33,7 @@ def found(result):
 @pytest.mark.parametrize("name", ["vuln_flask", "vuln_express", "vuln_django"])
 def test_vulnerable_apps_match_expectations(name, tmp_path):
     root, _, result = scan(name, tmp_path)
-    assert found(result) == expected_hits(root)
+    assert found(result) == expected_hits(root, FILE_LEVEL.get(name, []))
     assert all(a.status in ("ok", "not_applicable") for a in result.analyzers)
 
 

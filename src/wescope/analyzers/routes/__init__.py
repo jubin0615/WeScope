@@ -1,6 +1,6 @@
-"""WS-02 인증·인가 누락: authz-admin-route · authz-idor · authz-no-auth-write.
+"""WS-02 인증·인가 누락: authz-admin-route · authz-idor · authz-no-auth-write · authz-csrf-exempt.
 
-모두 '가드가 없어 보인다'는 부재 추정이라 신뢰도는 항상 Potential (규칙 기본값).
+모두 '가드가 없어 보인다'(csrf-exempt는 '쿠키 인증인지 모른다')는 추정이라 신뢰도는 항상 Potential (규칙 기본값).
 """
 import re
 
@@ -13,8 +13,11 @@ FRAMEWORKS = {"flask", "fastapi", "django", "express"}
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 ADMIN_PATH = re.compile(r"(?:^|/)(?:admin|internal|manage)(?:/|$|-|_)|/dashboard/admin", re.I)
-ADMIN_HINT = re.compile(r"is_?admin|role\s*[!=]==?\s*['\"]admin|['\"]admin['\"]\s*[!=]==?|admin_required|require_?admin"
-                        r"|require_?role|roles?_required|has_?role|permission|superuser|is_staff|staff_member|authori[sz]e", re.I)
+# is_staff=True·is_admin=True(조회·생성 인자)와 create_superuser()는 확인이 아니다: 뒤에 '= 값'이 오면 단서에서 뺀다
+_NOT_KWARG = r"(?!\w*\s*=[^=])"
+ADMIN_HINT = re.compile(rf"is_?admin{_NOT_KWARG}|role\s*[!=]==?\s*['\"]admin|['\"]admin['\"]\s*[!=]==?|admin_required"
+                        rf"|require_?admin|require_?role|roles?_required|has_?role|permission|(?<!create_)superuser{_NOT_KWARG}"
+                        rf"|is_staff{_NOT_KWARG}|staff_member|authori[sz]e", re.I)
 AUTH_HINT = re.compile(r"login_?required|user_passes_test|jwt_required|token_required|auth|current_user|get_current_user|require_?login"
                        r"|is_authenticated|verify_?token|req\.user|request\.user|session\[|passport|protect"
                        r"|ensureLoggedIn|require_?user|getServerSession", re.I)
@@ -24,6 +27,7 @@ DB_WRITE = re.compile(r"\.(?:add|add_all|commit|delete|save|create|insert\w*|upd
 # 소유자 조건 = '현재 사용자'와 비교하는 단서. user_id 같은 이름만으로는 안 된다 (경로 파라미터 이름일 수 있음)
 OWNER = re.compile(r"current_user|req\.user|request\.user|g\.user|session\[['\"]user|get_jwt_identity|auth\.uid|getServerSession")
 NO_AUTH_PATHS = re.compile(r"(?:^|/)(?:login|signin|signup|register|logout|health|healthz|webhooks?|auth|callback)(?:/|$)", re.I)
+CSRF_EXEMPT = re.compile(r"\bcsrf[._]exempt\b")      # Django @csrf_exempt · Flask-WTF @csrf.exempt
 _PARAM = re.compile(r"<(?:\w+:)?(\w+)>|\{(\w+)(?::[^}]*)?\}|:(\w+)")
 _LOOKUP = (r"(?:\.(?:get|get_or_404|filter_by|filter|where|execute|query|find\w*|first_or_404|select|fetch\w*|scalar\w*)"
            r"|\bget_object_or_404)\s*\([^;]*?\b{}\b")
@@ -85,4 +89,7 @@ def judge(route) -> list[RawHit]:
     if (WRITE_METHODS & set(route.methods) and route.body and DB_WRITE.search(route.body)
             and not AUTH_HINT.search(hints) and not is_admin and not NO_AUTH_PATHS.search(route.path)):
         hits.append(hit("authz-no-auth-write"))
+    # 웹훅·콜백은 외부 서비스가 부르므로 CSRF를 끄는 게 정상이다 (서명 검증은 따로)
+    if WRITE_METHODS & set(route.methods) and CSRF_EXEMPT.search(route.guards) and not NO_AUTH_PATHS.search(route.path):
+        hits.append(hit("authz-csrf-exempt"))
     return hits

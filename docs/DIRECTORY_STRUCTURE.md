@@ -63,7 +63,7 @@ WeScope/
 │       │   │   ├── model.py      #   Route, 가드 단서, 함수 범위
 │       │   │   ├── flask.py      #   @app.route, Blueprint
 │       │   │   ├── fastapi.py    #   APIRouter, Depends
-│       │   │   ├── django.py     #   urls.py path·include → view 함수·클래스, 가드 데코레이터·Mixin
+│       │   │   ├── django.py     #   urls.py path·include·router → view 함수·클래스·제네릭 뷰·ViewSet, 가드 데코레이터·Mixin·DRF 권한
 │       │   │   ├── express.py    #   app.get/router.post, 미들웨어 인자
 │       │   │   └── nextjs.py     #   (M4) app/**/route.ts, Server Action
 │       │   │
@@ -196,6 +196,7 @@ WeScope/
 │   │   ├── test_config.py
 │   │   └── ...                   # Analyzer당 1파일: 양성·음성·빈 폴더
 │   ├── test_rules_semgrep.py     # rules/semgrep 각 규칙의 취약·안전 표본
+│   ├── test_django.py            # Django 저장소 전체 설정: 전역 로그인 미들웨어·DRF 기본 권한·쿠키 Secure 미설정
 │   ├── test_engine/
 │   │   ├── test_normalize.py     # 지문 안정성, OWASP 분류
 │   │   ├── test_compare.py
@@ -218,7 +219,7 @@ WeScope/
 │       ├── clean_app/            # 같은 기능을 안전하게 구현한 앱 (오탐 0 기준)
 │       ├── vuln_flask/           # WS-01·02·05·06 취약점을 심은 Flask 앱
 │       ├── vuln_express/         # 같은 취약점의 Express 앱
-│       ├── vuln_django/          # 같은 취약점의 Django 앱 (urls.py·함수/클래스 view·DRF·settings)
+│       ├── vuln_django/          # 같은 취약점의 Django 앱 (urls.py·함수/클래스 view·제네릭 뷰·DRF ViewSet·settings)
 │       ├── vuln_next/            # (M3~) Next.js + Supabase + LLM 라우트
 │       ├── vuln_logic/           # (M3) 정적 분석으로 못 찾는 취약점: IDOR·대량 할당·금액 변조·파일 간 SQL 흐름 (AI 보완 탐지 측정용)
 │       ├── results/              # 샘플 결과 JSON (대시보드 트랙이 엔진 없이 화면 개발)

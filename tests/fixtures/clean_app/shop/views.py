@@ -17,6 +17,7 @@ from django.urls import reverse
 from django.utils.html import escape
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .models import Comment, Order, Product
@@ -102,7 +103,21 @@ def add_comment(request):
 
 @staff_member_required
 def staff_list(request):
-    return JsonResponse({"staff": list(User.objects.values_list("username", flat=True))})
+    return JsonResponse({"staff": list(User.objects.filter(is_staff=True).values_list("username", flat=True))})
+
+
+@login_required
+@require_POST
+def change_email(request):
+    request.user.email = request.POST["email"]
+    request.user.save()
+    return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@require_POST
+def stripe_webhook(request):
+    return JsonResponse({"received": True})
 
 
 class UserDeleteView(PermissionRequiredMixin, View):
