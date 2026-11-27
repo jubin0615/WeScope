@@ -4,17 +4,25 @@
 class FakeChatGPT:
     model = "fake-gpt"
 
-    def __init__(self, respond):
-        """respond(payload) → 응답 dict, 또는 던질 예외. 같은 묶음의 두 번째 요청이면 payload에 previous_attempt가 있다."""
+    def __init__(self, respond, triage=None):
+        """respond(payload) → 수정안 응답 dict, 또는 던질 예외. 같은 묶음의 두 번째 요청이면 payload에 previous_attempt가 있다.
+        triage(payload) → 의심 확인 응답. 없으면 늘 unclear (수정안만 보는 테스트가 의심 확인을 신경 쓰지 않게).
+        respond가 의심 확인 요청까지 받아야 하면 triage=respond."""
         self.respond = respond
+        self.triage = triage or (lambda payload: verdict("unclear"))
         self.requests: list[dict] = []
 
     def ask(self, instructions: str, payload: dict) -> dict:
         self.requests.append(payload)
-        answer = self.respond(payload)
+        answer = (self.triage if payload["task"] == "triage" else self.respond)(payload)
         if isinstance(answer, Exception):
             raise answer
         return answer
+
+
+def verdict(kind: str, evidence: dict | None = None, **fields) -> dict:
+    return {"verdict": kind, "reason_ko": "판단 근거", "impact_ko": "남의 주문을 볼 수 있어요" if kind == "confirmed" else "",
+            "evidence": evidence, **fields}
 
 
 def answer(diff: str, **fields) -> dict:

@@ -47,7 +47,8 @@ def test_rescan_sample_covers_change_states():
 
 FIX = ["summary_ko", "diff", "files", "behavior_change_ko", "follow_ups", "new_dependencies", "test_hint_ko", "confidence",
        "verification", "checks", "attempts", "cache_key", "instruction_suspect"]
-AI = ["level", "model", "requests", "cache_hits", "fixes", "budget_exceeded", "remaining_groups", "error"]
+AI = ["level", "model", "requests", "cache_hits", "triage", "fixes", "budget_exceeded", "remaining_groups", "error"]
+TRIAGE = ["verdict", "suggested", "reason_ko", "impact_ko", "evidence", "note_ko", "instruction_suspect", "cache_key"]
 
 
 def test_fix_sample_matches_fixer_output_shape():
@@ -60,3 +61,15 @@ def test_fix_sample_matches_fixer_output_shape():
         assert list(fix) == FIX and list(fix["checks"]) == ["apply", "syntax", "rescan", "reasons"]
     assert list(data["ai"]) == AI and list(data["ai"]["fixes"]) == ["verified", "partial", "failed"]
     assert FIX[:8] == list(fixer._FIELDS)
+    assert list(data["ai"]["triage"]) == ["confirmed", "protected", "unclear", "remaining"]
+
+
+def test_triage_sample_shape():
+    """B8-3a: 의심 확인(triage) 형식 (AI.md §4). 실제 출력 키 순서는 tests/test_llm/test_triage.py가 같은 목록으로 본다."""
+    data = json.loads((Path(__file__).parent / "fixtures/results/with-fix.json").read_text("utf-8"))
+    triaged = [f for f in data["findings"] if f["triage"]]
+    assert {f["triage"]["verdict"] for f in triaged} == {"confirmed", "protected", "unclear"}
+    for f in triaged:
+        assert list(f["triage"]) == TRIAGE and f["confidence_source"] in ("absence", "ai_confirmed")
+        assert (f["triage"]["suggested"] == "dismiss") == (f["triage"]["verdict"] == "protected")
+        assert (f["confidence_source"] == "ai_confirmed") == (f["triage"]["verdict"] == "confirmed")

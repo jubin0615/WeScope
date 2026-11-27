@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from wescope.llm.guards import Redactor, diff_files, safe_path, suspicious, with_git_headers
+from wescope.llm.guards import Redactor, diff_files, quote_matches, safe_path, suspicious, with_git_headers
 from wescope.llm.verify import syntax_error
 
 
@@ -60,3 +60,17 @@ def test_syntax_check(tmp_path, name, code, broken):
     path = tmp_path / name
     path.write_text(code, encoding="utf-8")
     assert bool(syntax_error(path)) is broken
+
+
+@pytest.mark.parametrize("start, end, quoted, ok", [
+    (2, 3, "@login_required\ndef delete_user(user_id):", True),
+    (2, 3, "   41| @login_required", True),                 # 보낸 줄 번호 접두어를 함께 인용해도 된다
+    (2, 2, "@admin_required", False),                       # 그 줄에 없는 코드
+    (1, 1, "@login_required", False),                       # 다른 줄
+    (2, 9, "@login_required", False),                       # 파일 밖
+    (2, 2, "@login", False),                                # 너무 짧은 인용은 아무 데나 맞는다
+    ("2", 2, "@login_required", False),
+])
+def test_quote_matches(start, end, quoted, ok):
+    text = 'app = Flask(__name__)\n@login_required\ndef delete_user(user_id):\n'
+    assert quote_matches(text, start, end, quoted) is ok

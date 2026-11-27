@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 
+from wescope.llm.client import LLMError
 from wescope.paths import home
 
 
@@ -28,3 +29,27 @@ def put(cache_key: str, answer: dict):
     temp.write_text(json.dumps(answer, ensure_ascii=False), encoding="utf-8")
     os.replace(temp, folder / f"{cache_key}.json")
     # shortcut: 지우지 않고 쌓인다 (응답 하나 수 KB). 커지면 오래된 것부터 정리
+
+
+class Session:
+    """한 검사(또는 요청 시 생성 한 번)의 ChatGPT 요청. 캐시를 먼저 보고, 요청 수·캐시 적중 수를 센다.
+    작업(수정안·의심 확인·보완 탐지)마다 자기 지시문과 프롬프트 버전을 넘긴다: 둘 다 캐시 키에 들어간다."""
+
+    def __init__(self, client):
+        self.client = client
+        self.model = None
+        self.stats = {"requests": 0, "cache_hits": 0}
+
+    def ask(self, instructions: str, version: str, payload: dict) -> tuple[dict, str]:
+        self.model = self.client.model      # 실제 클라이언트는 첫 요청 때 모델 목록을 받는다 (실패하면 LLMError)
+        cache_key = key(self.model, version, instructions, payload)
+        answer = get(cache_key)
+        if answer is not None:
+            self.stats["cache_hits"] += 1
+            return answer, cache_key
+        self.stats["requests"] += 1
+        answer = self.client.ask(instructions, payload)
+        if not isinstance(answer, dict):
+            raise LLMError("ChatGPT 응답이 JSON 객체가 아니에요")
+        put(cache_key, answer)
+        return answer, cache_key

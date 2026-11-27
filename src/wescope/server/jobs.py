@@ -21,7 +21,7 @@ class Job:
     error: str | None = None
     summary: dict | None = None
     rule_id: str | None = None        # 수정안 작업이면 그 묶음의 규칙
-    ai_progress: dict | None = None   # stage == "ai"일 때 {"done", "total"} (수정안 n/m)
+    ai_progress: dict | None = None   # stage == "ai"일 때 {"task": triage|fix, "done", "total"} (확인·수정안 n/m)
     retry: bool = False               # [다른 수정안]
     version: int = 0                  # 바뀔 때마다 1 증가 (SSE가 변화를 알아챈다)
 

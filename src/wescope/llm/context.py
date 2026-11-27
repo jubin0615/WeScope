@@ -14,12 +14,12 @@ _MANIFESTS = ("package.json", "requirements.txt", "pyproject.toml")
 _AROUND = 40                 # 함수 범위를 모를 때 발견 앞뒤 줄 수
 
 
-def _numbered(lines: list[str], start: int, end: int) -> str:
+def numbered(lines: list[str], start: int, end: int) -> str:
     """'  36| 코드'. 모델이 diff의 줄 위치를 잡게 번호를 붙인다 (diff에는 번호를 넣지 말라고 지시한다)."""
     return "\n".join(f"{n:>5}| {lines[n - 1]}" for n in range(max(start, 1), min(end, len(lines)) + 1))
 
 
-def _span(ctx, path: str, line: int) -> tuple[int, int]:
+def span(ctx, path: str, line: int) -> tuple[int, int]:
     """발견 줄을 감싸는 가장 안쪽 함수(Python), 모르면 앞뒤 40줄."""
     tree = ctx.python_ast(path) if path.endswith(".py") else None
     best = None
@@ -31,17 +31,17 @@ def _span(ctx, path: str, line: int) -> tuple[int, int]:
     return best or (line - _AROUND, line + _AROUND)
 
 
-def _excerpt(ctx, path: str, lines: list[str], hit_lines: list[int]) -> str:
+def excerpt(ctx, path: str, lines: list[str], hit_lines: list[int]) -> str:
     head = next((i for i, text in enumerate(lines) if text.startswith(("def ", "class ", "async def ", "@",
                                                                            "function ", "export ", "app."))), 30)
-    spans = sorted([(1, max(head, 1))] + [_span(ctx, path, n) for n in hit_lines if n > 0])
+    spans = sorted([(1, max(head, 1))] + [span(ctx, path, n) for n in hit_lines if n > 0])
     merged = []
     for start, end in spans:
         if merged and start <= merged[-1][1] + 1:
             merged[-1] = (merged[-1][0], max(merged[-1][1], end))
         else:
             merged.append((start, end))
-    return "\n  ...\n".join(_numbered(lines, s, e) for s, e in merged)
+    return "\n  ...\n".join(numbered(lines, s, e) for s, e in merged)
 
 
 def fix_payload(ctx, group, redactor, *, previous=None, rejected=None) -> tuple[dict, bool]:
@@ -56,8 +56,8 @@ def fix_payload(ctx, group, redactor, *, previous=None, rejected=None) -> tuple[
         out = []
         for path, text in texts.items():
             lines = text.splitlines()
-            body = _numbered(lines, 1, len(lines)) if whole and len(text) <= WHOLE_FILE else \
-                _excerpt(ctx, path, lines, by_file[path])
+            body = numbered(lines, 1, len(lines)) if whole and len(text) <= WHOLE_FILE else \
+                excerpt(ctx, path, lines, by_file[path])
             out.append({"path": path, "excerpt": not (whole and len(text) <= WHOLE_FILE), "content": body})
         return out
 

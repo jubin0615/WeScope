@@ -267,7 +267,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `change` | new / existing / fixed / unknown |
 | `introduced_in` | 처음 발견된 커밋 |
 | `status` | open / dismissed(사용자 확정) |
-| `triage` | ChatGPT 판단 (`verdict`: confirmed / protected / unclear, `suggested`, `reason_ko`, `impact_ko`, 근거 위치), 사용자 확인 여부, 지시문 의심 표시 |
+| `triage` | ChatGPT 의심 확인 (B8-3a, AI.md §4). 확인하지 않은 발견은 `null`. `{"verdict": "confirmed"|"protected"|"unclear", "suggested": "dismiss"|null, "reason_ko", "impact_ko" (confirmed일 때만), "evidence": {"file", "line_start", "line_end"}|null (protected일 때만), "note_ko" (protected를 쓰지 않은 이유)|null, "instruction_suspect": bool, "cache_key"}`. 대상은 HIGH 이상 `confidence_source == "absence"`. confirmed면 `confidence` Likely·`confidence_source` `ai_confirmed`. protected는 근거 줄을 실제 코드와 대조해 맞을 때만이고 **오탐 제안**일 뿐 `status`는 바꾸지 않는다 (오탐 처리는 사용자가 ignores API로). 규칙·분류·심각도는 바꾸지 않는다 |
 | `fix` | 수정안 (그룹 단위, 같은 `rule_id`의 대표(첫) 발견에 붙음): `summary_ko`, `diff`(비밀값은 `«WS_SECRET_n»` 자리표시 그대로), `files`, `behavior_change_ko`, `follow_ups`, `new_dependencies`, `test_hint_ko`, `confidence`, `verification`(`verified` / `partial` / `failed`), `checks`(`apply`·`syntax`·`rescan`: true/false/null, `reasons`: 실패 이유 문장), `attempts`(1~2), `cache_key`, `instruction_suspect`(보낸 코드에 지시문 같은 텍스트가 있었음). 샘플: `tests/fixtures/results/with-fix.json` |
 | `chain`, `related` | 체인 발견일 때 구성 발견 |
 
@@ -286,7 +286,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `ai_coverage` | ChatGPT 검토 범위(업무 로직 인가·결제·파일 간 흐름·미지원 언어) 상태 |
 | `findings` | Finding[] |
 | `summary` | 심각도별 개수, new/fixed 개수, 위험 점수 |
-| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model" (요청 전에 멈췄으면 null), "requests", "cache_hits", "fixes": {"verified", "partial", "failed"}, "budget_exceeded", "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message"} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
+| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model" (요청 전에 멈췄으면 null), "requests", "cache_hits", "triage": {"confirmed", "protected", "unclear", "remaining"} (B8-3a), "fixes": {"verified", "partial", "failed"}, "budget_exceeded" (확인·수정안 중 하나라도 예산 초과), "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message"} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
 
 ---
 
@@ -391,7 +391,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 
 - **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "hook": bool | null, "last_scan": ScanSummary | null}` — `hook`(B7)은 hook 파일에서 바로 읽은 자동 검사 켜짐 여부, 로컬 Git 폴더가 아니거나 hook이 `.git` 밖이면 `null`. 로컬 Git 폴더는 연결할 때 켠다 (PRD P6 기본 켬)
 - **ScanSummary**: `{"id", "scanned_at", "trigger", "commit_sha", "baseline", "risk_score", "summary"}`
-- **Job**: `{"scan_id", "repo_id", "trigger": "manual"|"hook", "status": "queued"|"running"|"done"|"failed", "stage": "collect"|"analyze"|"organize"|"ai"|"save"|null, "error", "summary", "rule_id", "ai_progress"}` — B8: `stage == "ai"`는 ChatGPT 수정안 단계(연결했을 때만), `ai_progress`는 그때 `{"done", "total"}`(수정안 n/m), 아니면 null. `rule_id`는 수정안 작업이면 그 규칙, 검사면 null
+- **Job**: `{"scan_id", "repo_id", "trigger": "manual"|"hook", "status": "queued"|"running"|"done"|"failed", "stage": "collect"|"analyze"|"organize"|"ai"|"save"|null, "error", "summary", "rule_id", "ai_progress"}` — B8: `stage == "ai"`는 ChatGPT 수정안 단계(연결했을 때만), `ai_progress`는 그때 `{"task": "triage"|"fix", "done", "total"}`(확인 n/m → 수정안 n/m), 아니면 null. `rule_id`는 수정안 작업이면 그 규칙, 검사면 null
 - SSE는 0.2초마다 **현재 상태**를 보낸다. 빠른 스캔에서는 중간 단계가 생략될 수 있으니 화면은 마지막으로 받은 `stage`만 보여 준다.
 - 작업 큐는 한 번에 1개만 돈다. 서버를 끄면(Ctrl+C) 돌던 스캔은 끝까지 마치고 대기 작업은 버린다.
 
