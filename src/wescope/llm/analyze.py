@@ -57,7 +57,8 @@ class Run:
 
         def look(target):
             payload, suspects = review.review_payload(ctx, target, findings, redactor)
-            answer, key = self.session.ask(review.INSTRUCTIONS, review.PROMPT_VERSION, payload, review.EFFORT)
+            answer, key = self.session.ask(review.INSTRUCTIONS, review.PROMPT_VERSION, payload, review.EFFORT,
+                                           valid=review.well_formed)
             new, merged, dropped = review.check_answer(ctx, answer, {f["path"] for f in payload["files"]}, findings,
                                                        redactor, suspects, key)
             hits.extend(new)

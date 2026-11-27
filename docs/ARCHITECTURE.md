@@ -255,7 +255,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `rule_id`, `category` | 규칙, WS 영역 (`WS-05`) |
 | `cwe`, `owasp`, `owasp_ai` | `CWE-89`, `A05:2025`, `["LLM01:2025"]` |
 | `severity`, `confidence` | `CRITICAL`~`INFO`, Likely/Potential |
-| `source` | `engine`(정적 분석) / `ai`(ChatGPT 보완 탐지, B8-3b). AI 발견은 `rule_id` `ai-<vuln_type>`(rules/catalog/ai.yml), 신뢰도 항상 Potential·`confidence_source` `ai`, 심각도는 유형별 상한 이하, `why_ko`·`fix_ko`는 ChatGPT가 그 코드에 맞춰 쓴 문장, `extra`: `vuln_type`·`attack_scenario_ko`·`identity`·`cache_key`(+ 지시문 의심이면 `instruction_suspect: "true"`). 지문은 인용 줄이 아니라 `identity`(감싼 함수의 def 줄, 없으면 인용 첫 줄)로 만든다: 같은 함수·같은 유형이면 같은 발견 |
+| `source` | `engine`(정적 분석) / `ai`(ChatGPT 보완 탐지, B8-3b). AI 발견은 `rule_id` `ai-<vuln_type>`(rules/catalog/ai.yml), 신뢰도 항상 Potential·`confidence_source` `ai`, 심각도는 유형별 상한 이하, `why_ko`·`fix_ko`는 ChatGPT가 그 코드에 맞춰 쓴 문장, `extra`: `vuln_type`·`attack_scenario_ko`·`identity`·`cache_key`(+ 지시문 의심이면 `instruction_suspect: "true"`). 지문은 인용 줄이 아니라 `identity`(감싼 함수의 이름 경로와 def 줄 예: `OrderAPI.get: def get(self, id):`, 없으면 인용 첫 줄)로 만든다: 같은 함수·같은 유형이면 같은 발견. 보완 탐지 응답에 `findings` 목록이 없으면 오류로 보고 그 파일을 검토한 것으로 치지 않는다 |
 | `confidence_source` | 신뢰도 근거: `flow`(흐름 확인) / `absence`(부재 추정) / `ai_confirmed`(ChatGPT 확인) / `ai`(ChatGPT 발견) |
 | `title_ko` | 사람 말 제목 — 결과 중심 ("입력값으로 DB 내용을 마음대로 꺼내거나 지울 수 있어요") |
 | `tech_name_ko` | 기술 이름 ("SQL 인젝션") — 판정 정보·보고서에서 사용 |

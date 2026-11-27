@@ -62,7 +62,8 @@ def make_fix(session, ctx, group, before, rescan, *, rejected=None) -> dict:
     previous, best = None, None
     for attempt in (1, 2):
         payload, suspect = fix_payload(ctx, group, redactor, previous=previous, rejected=rejected)
-        answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload, EFFORT)
+        answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload, EFFORT,
+                                  valid=lambda a: _shape_error(a) is None)
         problem = _shape_error(answer)
         checks = ({"status": "failed", "apply": False, "syntax": None, "rescan": None, "reasons": [problem]}
                   if problem else verify(ctx.root, answer["diff"], redactor, group, before, rescan))

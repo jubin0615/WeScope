@@ -255,7 +255,7 @@
       "extra": {
         "vuln_type": "price-tampering",
         "attack_scenario_ko": "로그인한 사용자가 unit_price를 0.01로 바꿔 보내면 비싼 상품을 거의 공짜로 결제해요.",
-        "identity": "def checkout():",
+        "identity": "checkout: def checkout():",
         "cache_key": "5e4d3c2b1a0f9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d"
       },
       "change": "new",

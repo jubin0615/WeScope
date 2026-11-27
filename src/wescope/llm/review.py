@@ -11,6 +11,7 @@ import re
 from pathlib import PurePosixPath
 
 from wescope.llm.context import TOTAL, WHOLE_FILE, enclosing_def, excerpt, local_imports, numbered
+from wescope.llm.client import LLMError
 from wescope.llm.guards import Redactor, map_strings, quote_matches, safe_path, suspicious
 from wescope.models.finding import SEVERITIES, RawHit
 from wescope.models.scan_result import CoverageRow
@@ -143,10 +144,18 @@ def sent_line_numbers(sent: dict) -> set[int] | None:
     return {int(number) for number in rows if number.isdigit()}
 
 
+def well_formed(answer: dict) -> bool:
+    return isinstance(answer.get("findings"), list)
+
+
 def check_answer(ctx, answer, sent: set[str], findings, redactor, suspects, key) -> tuple[list[RawHit], int, int]:
     """응답 → (새 AI 발견 RawHit들, 정적 발견에 근거로 붙인 수, 버린 수)."""
     types = vuln_types()
-    items = answer.get("findings") if isinstance(answer.get("findings"), list) else []
+    items = answer.get("findings")
+    if not well_formed(answer):
+        # 목록이 없는 응답은 '검토했는데 없음'이 아니다. 오류로 올려 그 파일을 검토한 것으로 기록하지 않는다
+        # (기록하면 직전 AI 발견이 고쳐짐이 된다)
+        raise LLMError("ChatGPT 보완 탐지 응답 형식이 맞지 않아요 (findings 목록 없음)")
     hits, merged, dropped = [], 0, 0
     for item in items:
         item = item if isinstance(item, dict) else {}

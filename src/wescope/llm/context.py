@@ -21,30 +21,43 @@ def numbered(lines: list[str], start: int, end: int) -> str:
 
 
 def _innermost(ctx, path: str, line: int):
-    """line을 감싸는 가장 안쪽 함수 노드 (Python만, 데코레이터 포함). 없으면 None."""
+    """(line을 감싸는 가장 안쪽 함수 노드, 그 함수까지의 이름 경로 예: ["OrderAPI", "get"]). Python만, 데코레이터 포함.
+    없으면 (None, [])."""
     tree = ctx.python_ast(path) if path.endswith(".py") else None
-    best = None
-    for node in ast.walk(tree) if tree else ():
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            start = min([node.lineno, *(d.lineno for d in node.decorator_list)])
-            if start <= line <= node.end_lineno and (best is None or start >= best[0]):
-                best = (start, node)
-    return best[1] if best else None
+    best = (None, [])
+
+    def visit(node, names):
+        nonlocal best
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                start = min([child.lineno, *(d.lineno for d in child.decorator_list)])
+                if start <= line <= child.end_lineno:
+                    if not isinstance(child, ast.ClassDef):
+                        best = (child, names + [child.name])
+                    visit(child, names + [child.name])     # 안쪽에 있으면 그쪽이 덮어쓴다
+            else:
+                visit(child, names)
+    if tree is not None:
+        visit(tree, [])
+    return best
 
 
 def span(ctx, path: str, line: int) -> tuple[int, int]:
     """발견 줄을 감싸는 가장 안쪽 함수(Python), 모르면 앞뒤 40줄."""
-    node = _innermost(ctx, path, line)
+    node, _ = _innermost(ctx, path, line)
     if node is None:
         return line - _AROUND, line + _AROUND
     return min([node.lineno, *(d.lineno for d in node.decorator_list)]), node.end_lineno
 
 
 def enclosing_def(ctx, path: str, line: int) -> str | None:
-    """line을 감싸는 가장 안쪽 함수의 def 줄 코드 (Python만). 같은 함수 안의 발견을 알아보는 열쇠로 쓴다."""
-    node = _innermost(ctx, path, line)
+    """line을 감싸는 가장 안쪽 함수의 이름 경로 + def 줄 코드 (Python만). 예: "OrderAPI.get: def get(self, id):".
+    같은 함수 안의 발견을 알아보는 열쇠로 쓴다. 이름 경로가 있어 다른 클래스의 같은 이름 메서드와 섞이지 않는다."""
+    node, names = _innermost(ctx, path, line)
     lines = (ctx.text(path) or "").splitlines()
-    return lines[node.lineno - 1].strip() if node is not None and node.lineno <= len(lines) else None
+    if node is None or node.lineno > len(lines):
+        return None
+    return f"{'.'.join(names)}: {lines[node.lineno - 1].strip()}"
 
 
 def local_imports(ctx, path: str) -> dict[str, dict[str, str]]:

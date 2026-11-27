@@ -40,16 +40,19 @@ class Session:
         self.model = None
         self.stats = {"requests": 0, "cache_hits": 0}
 
-    def ask(self, instructions: str, version: str, payload: dict, effort: str) -> tuple[dict, str]:
+    def ask(self, instructions: str, version: str, payload: dict, effort: str, valid=lambda answer: True) -> tuple[dict, str]:
+        """valid(answer): 형식이 맞는 응답인가. 맞는 응답만 캐시에 남기고 쓴다 — 틀린 응답이 남으면 코드가 바뀌기 전까지
+        같은 실패가 반복된다 (예: findings 목록 없는 보완 탐지 응답 → 그 파일은 계속 확인 불가)."""
         self.model = self.client.model      # 실제 클라이언트는 첫 요청 때 모델 목록을 받는다 (실패하면 LLMError)
         cache_key = key(self.model, version, effort, instructions, payload)
         answer = get(cache_key)
-        if answer is not None:
+        if answer is not None and valid(answer):
             self.stats["cache_hits"] += 1
             return answer, cache_key
         self.stats["requests"] += 1
         answer = self.client.ask(instructions, payload, effort)
         if not isinstance(answer, dict):
             raise LLMError("ChatGPT 응답이 JSON 객체가 아니에요")
-        put(cache_key, answer)
+        if valid(answer):
+            put(cache_key, answer)
         return answer, cache_key

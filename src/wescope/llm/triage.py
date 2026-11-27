@@ -113,7 +113,8 @@ def check(session, ctx, finding) -> str:
     """한 발견을 판정해 finding.triage에 붙이고(confirmed면 신뢰도도 올림) 최종 판정을 돌려준다."""
     redactor = Redactor(ctx.secrets.values())
     payload, suspects = triage_payload(ctx, finding, redactor)
-    answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload, EFFORT)
+    answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload, EFFORT,
+                              valid=lambda a: a.get("verdict") in VERDICTS)
     verdict = answer.get("verdict") if answer.get("verdict") in VERDICTS else "unclear"
     text = lambda name: answer[name] if isinstance(answer.get(name), str) else ""
     evidence = answer.get("evidence") if isinstance(answer.get("evidence"), dict) else {}

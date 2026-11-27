@@ -164,3 +164,36 @@ def test_previous_ai_finding_outside_the_sent_excerpt_is_unknown(logic, monkeypa
     sent = [f for r in fake.requests if r["task"] == "review" for f in r["files"] if f["path"] == "services.py"]
     assert sent and sent[0]["excerpt"] and "STORE[key]" not in sent[0]["content"]
     assert ai_findings(again)["ai-idor"].change == "unknown"
+
+
+@pytest.mark.parametrize("broken", [{}, {"error": "unable to review"}, {"findings": "none"}])
+def test_malformed_review_answer_does_not_count_as_reviewed(logic, broken):
+    """findings 목록이 없는 응답은 '검토했는데 없음'이 아니다: 직전 AI 발견을 고쳐짐으로 바꾸지 않는다."""
+    first, _ = scan(logic, lambda p: [at(p, "app.py", "unit_price", vuln_type="price-tampering")])
+    app = logic / "app.py"
+    app.write_text(app.read_text(encoding="utf-8") + "\n", encoding="utf-8")      # 다시 묻게
+    fake = FakeChatGPT(lambda p: answer("x"), review=lambda p: broken)
+    again = run_scan(Target("folder", str(logic)), ai=fake, previous=first)
+    assert ai_findings(again)["ai-price-tampering"].change == "unknown"
+    assert again.ai["error"]["kind"] == "error" and again.ai["review"]["targets"] == 0
+
+
+def test_same_method_name_in_different_classes_stays_separate(tmp_path):
+    """다른 클래스의 같은 이름 메서드(OrderAPI.get, UserAPI.get)는 다른 함수다: 같은 유형이어도 발견 둘."""
+    (tmp_path / "app.py").write_text(
+        "from flask import Flask\nfrom flask.views import MethodView\n\napp = Flask(__name__)\n\n\n"
+        "class OrderAPI(MethodView):\n    def get(self, id):\n        return Order.query.get(id)\n\n\n"
+        "class UserAPI(MethodView):\n    def get(self, id):\n        return User.query.get(id)\n\n\n"
+        "@app.route('/ping')\ndef ping():\n    return 'ok'\n", encoding="utf-8")
+    found = lambda p: [at(p, "app.py", "Order.query.get(id)", vuln_type="idor"),
+                       at(p, "app.py", "User.query.get(id)", vuln_type="idor")]
+    result, _ = scan(tmp_path, found)
+    assert len([f for f in result.findings if f.rule_id == "ai-idor"]) == 2
+
+
+def test_malformed_review_answer_is_asked_again_next_time(logic):
+    """틀린 응답은 캐시에 남지 않는다: 코드가 그대로여도 다음 검사에서 다시 물어 제대로 검토한다."""
+    fake = FakeChatGPT(lambda p: answer("x"), review=lambda p: {"error": "busy"})
+    run_scan(Target("folder", str(logic)), ai=fake)
+    again, _ = scan(logic, lambda p: [at(p, "app.py", "unit_price", vuln_type="price-tampering")])
+    assert "ai-price-tampering" in ai_findings(again)
