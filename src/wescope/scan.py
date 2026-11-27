@@ -1,7 +1,8 @@
 """run_scan(): 파이프라인 조립. 서버 작업 큐·hook·테스트가 모두 이 함수를 부른다.
 
 엔진은 저장소(store)·설정 파일을 모른다. 직전 결과·오탐 지문·꺼 둔 규칙은 scan_repo()가 store에서 읽어 넘긴다.
-ChatGPT 단계(의심 확인 → 수정안)는 compare 뒤·aggregate 앞(ARCHITECTURE §2의 5·8번). 보완 탐지는 B8-3b, 체인(6번)은 B8-4.
+ChatGPT 보완 탐지(심층)는 compare 앞(새 발견도 직전 결과와 비교), 의심 확인 → 수정안은 compare 뒤·aggregate 앞
+(ARCHITECTURE §2의 5·8번). 체인(6번)은 B8-4.
 llm은 탐지기를 모르므로 수정안 재검사 함수(_rescanner)를 여기서 넘긴다.
 """
 from wescope.analyzers.registry import analyzers
@@ -9,9 +10,9 @@ from wescope.collector.context import collect
 from wescope.collector.snapshot import Target
 from wescope.engine.aggregate import aggregate
 from wescope.engine.compare import compare
-from wescope.engine.normalize import normalize
+from wescope.engine.normalize import normalize, sort_key
 from wescope.engine.runner import run_all
-from wescope.llm import analyze, fixer
+from wescope.llm import analyze, fixer, review
 from wescope.llm import client as llm_client
 from wescope.llm.cache import Session
 from wescope.llm.client import LLMError
@@ -61,14 +62,23 @@ def run_scan(target: Target, *, previous: ScanResult | None = None, ignored=froz
         hits, statuses = run_all(ctx, analyzers(), strict=strict)
         progress("organize")
         findings = normalize(hits, ctx)
-        findings = compare(findings, previous, ctx.partial_files, ctx.source.get("commit"), ctx.excluded)
-        summary = None
-        if ai is not None:
+        run = analyze.Run(ai, ai_level) if ai is not None else None
+        if run is not None:
             progress("ai")
-            summary = analyze.analyze(findings, ctx, ai, _rescanner(statuses, ctx.source["git"]), level=ai_level,
-                                      progress=progress, skip=lambda f: f.fingerprint in ignored or f.rule_id in disabled)
+            ai_hits = run.review(findings, ctx, progress=progress)
+            findings = sorted(findings + review.adopt(normalize(ai_hits, ctx)), key=sort_key)
+        # 직전 AI 발견은 이번에 그 줄을 모델에 보냈을 때만 고쳐짐·그대로를 판단한다. 아니면 확인 불가
+        saw = run.saw if run else (lambda path, line: False)
+        findings = compare(findings, previous, ctx.partial_files, ctx.source.get("commit"), ctx.excluded,
+                           unchecked=lambda old: old.source == "ai" and not saw(old.location.file, old.location.line))
+        summary = None
+        if run is not None:
+            progress("ai")
+            summary = run.check_and_fix(findings, ctx, _rescanner(statuses, ctx.source["git"]), progress=progress,
+                                        skip=lambda f: f.fingerprint in ignored or f.rule_id in disabled)
         result = aggregate(findings, statuses, ctx, ignored=ignored, disabled=disabled, trigger=trigger,
                            repo=target.repo_id, baseline_scan=previous.scan_id if previous else None, scan_id=scan_id)
+        result.ai_coverage = run.coverage if run else []
         result.ai = summary
         return result
 

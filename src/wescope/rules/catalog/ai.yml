@@ -1,0 +1,294 @@
+# ChatGPT 보완 탐지 유형 (RULES.md §3, AI.md §5) — llm/review.py. rule_id = ai-<vuln_type>, 출처 AI.
+# severity는 상한이다 (ChatGPT가 제안한 값을 쓰되 넘지 못한다). 신뢰도는 항상 Potential (2026-11-27 결정).
+# why_ko·fix_ko는 ChatGPT가 그 코드에 맞춰 쓴 문장으로 바꾸고, 여기 문장은 응답에 없을 때 쓴다.
+# limitations_ko는 유형과 상관없이 같은 문장이다: ChatGPT가 읽고 판단한 것이지 실행해 확인한 것이 아니다.
+# tech_name_ko에 'ChatGPT'를 넣지 않는다: 화면은 AI 태그로, 보고서는 제목의 '· AI'로 구분한다 (중복 표시 방지).
+
+- id: ai-idor
+  category: WS-02
+  cwe: CWE-639
+  severity: HIGH
+  confidence: Potential
+  title_ko: "번호만 바꾸면 다른 사람 데이터에 닿을 수 있어 보여요"
+  tech_name_ko: "IDOR (소유자 확인 누락)"
+  why_ko: "로그인한 사용자가 요청의 id만 바꿔 다른 사람의 데이터를 읽거나 바꿀 수 있어요."
+  fix_ko: "데이터를 꺼내는 조건에 현재 사용자를 넣거나, 꺼낸 뒤 소유자가 현재 사용자인지 확인하세요."
+  avoid_ko: "id를 추측하기 어렵게 바꾸는 것만으로 끝내지 마세요."
+  fix_example: |
+    # 수정 전
+    order = Order.query.get(order_id)
+    # 수정 후
+    order = Order.query.filter_by(id=order_id, user_id=current_user.id).first_or_404()
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-missing-authz
+  category: WS-02
+  cwe: CWE-862
+  severity: CRITICAL
+  confidence: Potential
+  title_ko: "권한 확인 없이 관리 기능을 쓸 수 있어 보여요"
+  tech_name_ko: "권한 확인 누락"
+  why_ko: "화면에서 숨긴 기능이라도 서버가 역할을 확인하지 않으면 누구나 호출할 수 있어요."
+  fix_ko: "그 기능을 처리하는 서버 코드에서 역할·권한을 확인하세요."
+  avoid_ko: "프론트엔드에서 버튼을 숨기는 것만으로 막지 마세요."
+  fix_example: |
+    # 수정 후
+    if not current_user.is_admin:
+        abort(403)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-client-trusted-identity
+  category: WS-02
+  cwe: CWE-602
+  severity: CRITICAL
+  confidence: Potential
+  title_ko: "요청에 담긴 사용자·역할 값을 그대로 믿고 있어 보여요"
+  tech_name_ko: "클라이언트가 보낸 신원 신뢰"
+  why_ko: "요청 본문·헤더의 user_id나 role은 사용자가 마음대로 바꿀 수 있어요. 다른 사람인 척하거나 관리자가 될 수 있어요."
+  fix_ko: "사용자·역할은 서버의 로그인 세션이나 검증한 토큰에서 꺼내세요."
+  avoid_ko: "요청 값에 서명 없이 의존하지 마세요."
+  fix_example: |
+    # 수정 전
+    user_id = request.json["user_id"]
+    # 수정 후
+    user_id = current_user.id
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-mass-assignment
+  category: WS-02
+  cwe: CWE-915
+  severity: HIGH
+  confidence: Potential
+  title_ko: "요청 값으로 바꾸면 안 되는 필드까지 바뀔 수 있어 보여요"
+  tech_name_ko: "대량 할당"
+  why_ko: "요청 본문을 모델에 통째로 넣으면 role·is_admin·balance 같은 필드를 사용자가 바꿀 수 있어요."
+  fix_ko: "바꿔도 되는 필드만 골라서 넣으세요 (허용 목록)."
+  avoid_ko: "막을 필드만 빼는 방식(차단 목록)에 기대지 마세요. 새 필드가 생기면 뚫려요."
+  fix_example: |
+    # 수정 후
+    for field in ("name", "bio"):
+        if field in request.json:
+            setattr(current_user, field, request.json[field])
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-price-tampering
+  category: WS-07
+  cwe: CWE-602
+  severity: CRITICAL
+  confidence: Potential
+  title_ko: "금액·수량을 사용자가 보낸 값으로 계산하고 있어 보여요"
+  tech_name_ko: "가격 변조"
+  why_ko: "요청의 가격·할인 값을 바꿔 원하는 금액으로 결제하거나 주문할 수 있어요."
+  fix_ko: "가격은 서버의 상품 정보에서 다시 계산하고, 요청에서는 상품 id와 수량만 받으세요."
+  avoid_ko: "프론트엔드에서 계산한 합계를 그대로 결제 금액으로 쓰지 마세요."
+  fix_example: |
+    # 수정 전
+    total = request.json["price"] * qty
+    # 수정 후
+    total = Product.query.get_or_404(product_id).price * qty
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-state-skip
+  category: WS-07
+  cwe: CWE-841
+  severity: HIGH
+  confidence: Potential
+  title_ko: "앞 단계를 건너뛰고 다음 상태로 넘어갈 수 있어 보여요"
+  tech_name_ko: "상태 전이 건너뛰기"
+  why_ko: "결제를 확인하기 전에 주문 완료·배송 같은 다음 단계를 호출할 수 있어요."
+  fix_ko: "상태를 바꾸기 전에 지금 상태가 허용된 이전 상태인지 서버에서 확인하세요."
+  avoid_ko: "화면 순서대로만 호출될 거라고 가정하지 마세요."
+  fix_example: |
+    # 수정 후
+    if order.status != "paid":
+        abort(409)
+    order.status = "shipped"
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-race-double-spend
+  category: WS-07
+  cwe: CWE-362
+  severity: HIGH
+  confidence: Potential
+  title_ko: "같은 요청을 동시에 보내면 두 번 처리될 수 있어 보여요"
+  tech_name_ko: "경쟁 조건 이중 처리"
+  why_ko: "확인과 차감 사이에 다른 요청이 끼어들어 쿠폰·포인트·결제를 두 번 쓸 수 있어요."
+  fix_ko: "확인과 차감을 하나의 원자적 갱신(조건부 UPDATE, 잠금, 고유 제약)으로 하세요."
+  avoid_ko: "확인한 뒤 따로 저장하는 두 단계로 나누지 마세요."
+  fix_example: |
+    # 수정 후 (조건부 갱신: 잔액이 충분할 때만 한 번에 차감)
+    updated = db.session.execute(update(Wallet).where(Wallet.id == wid, Wallet.balance >= amount)
+                                 .values(balance=Wallet.balance - amount)).rowcount
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-weak-reset-token
+  category: WS-02
+  cwe: CWE-640
+  severity: HIGH
+  confidence: Potential
+  title_ko: "비밀번호 재설정 토큰을 추측하거나 다시 쓸 수 있어 보여요"
+  tech_name_ko: "약한 재설정·인증 토큰"
+  why_ko: "토큰이 예측 가능하거나 만료·1회 사용 확인이 없으면 남의 계정 비밀번호를 바꿀 수 있어요."
+  fix_ko: "secrets 모듈로 충분히 긴 토큰을 만들고, 만료 시간과 한 번만 쓰이는지 확인하세요."
+  avoid_ko: "시간·사용자 id·random 모듈로 토큰을 만들지 마세요."
+  fix_example: |
+    # 수정 후
+    token = secrets.token_urlsafe(32)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-account-enumeration
+  category: WS-08
+  cwe: CWE-204
+  severity: MEDIUM
+  confidence: Potential
+  title_ko: "응답 차이로 가입된 계정을 알아낼 수 있어 보여요"
+  tech_name_ko: "계정 열거"
+  why_ko: "\"없는 이메일\"과 \"비밀번호 틀림\"을 다르게 알려 주면 가입자 목록을 모을 수 있어요."
+  fix_ko: "로그인·비밀번호 찾기 응답을 계정 존재 여부와 상관없이 같게 하세요."
+  avoid_ko: "오류 문구만 같게 하고 응답 코드·시간이 다르게 두지 마세요."
+  fix_example: |
+    # 수정 후
+    return jsonify(error="이메일 또는 비밀번호가 맞지 않아요"), 401
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-session-fixation
+  category: WS-06
+  cwe: CWE-384
+  severity: MEDIUM
+  confidence: Potential
+  title_ko: "로그인한 뒤에도 세션 ID를 새로 만들지 않아 보여요"
+  tech_name_ko: "세션 고정"
+  why_ko: "로그인 전에 공격자가 심어 둔 세션 ID가 로그인 뒤에도 그대로 쓰이면 그 계정으로 들어갈 수 있어요."
+  fix_ko: "로그인에 성공하면 세션을 비우고 새 세션 ID를 발급하세요."
+  avoid_ko: "세션에 사용자 정보만 덧붙이고 끝내지 마세요."
+  fix_example: |
+    # 수정 후
+    session.clear()
+    login_user(user)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-insecure-file-access
+  category: WS-02
+  cwe: CWE-639
+  severity: HIGH
+  confidence: Potential
+  title_ko: "다른 사람의 파일을 내려받을 수 있어 보여요"
+  tech_name_ko: "파일 접근 권한 누락"
+  why_ko: "다운로드·내보내기에서 파일 주인을 확인하지 않으면 이름이나 id만 바꿔 남의 파일을 받을 수 있어요."
+  fix_ko: "파일을 돌려주기 전에 그 파일의 주인이 현재 사용자인지 확인하세요."
+  avoid_ko: "파일 이름을 길게 만드는 것만으로 막지 마세요."
+  fix_example: |
+    # 수정 후
+    doc = Document.query.filter_by(id=doc_id, owner_id=current_user.id).first_or_404()
+    return send_file(doc.path)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-cross-file-injection-sql
+  category: WS-05
+  cwe: CWE-89
+  severity: HIGH
+  confidence: Potential
+  title_ko: "다른 파일의 함수를 거쳐 입력이 SQL에 들어가 보여요"
+  tech_name_ko: "파일 간 SQL 인젝션"
+  why_ko: "요청 값이 다른 파일의 함수로 넘어가 SQL 문자열에 그대로 붙으면 DB 데이터를 읽거나 지울 수 있어요."
+  fix_ko: "SQL을 만드는 함수에서 값을 문자열로 붙이지 말고 파라미터로 넘기세요."
+  avoid_ko: "따옴표를 지우는 방식으로 막지 마세요."
+  fix_example: |
+    # 수정 후
+    db.execute("SELECT * FROM products WHERE name LIKE ?", (f"%{q}%",))
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-cross-file-injection-command
+  category: WS-05
+  cwe: CWE-78
+  severity: CRITICAL
+  confidence: Potential
+  title_ko: "다른 파일을 거쳐 입력이 명령 실행에 들어가 보여요"
+  tech_name_ko: "파일 간 명령 인젝션"
+  why_ko: "요청 값이 다른 파일의 함수에서 셸 명령에 붙으면 서버에서 아무 명령이나 실행될 수 있어요."
+  fix_ko: "셸을 거치지 말고 인자 목록으로 실행하고, 값은 허용 목록으로 검사하세요."
+  avoid_ko: "shell=True에 이스케이프만 덧붙이지 마세요."
+  fix_example: |
+    # 수정 후
+    subprocess.run(["ping", "-c", "1", host], check=True)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-cross-file-xss
+  category: WS-05
+  cwe: CWE-79
+  severity: HIGH
+  confidence: Potential
+  title_ko: "다른 파일을 거쳐 입력이 HTML에 그대로 나가 보여요"
+  tech_name_ko: "파일 간 XSS"
+  why_ko: "요청 값이 다른 파일에서 HTML로 그대로 출력되면 다른 사용자의 브라우저에서 스크립트가 실행될 수 있어요."
+  fix_ko: "템플릿의 자동 이스케이프를 쓰고, HTML을 직접 이어 붙이지 마세요."
+  avoid_ko: "<script> 같은 단어만 지우는 방식으로 막지 마세요."
+  fix_example: |
+    # 수정 후
+    return render_template("page.html", name=name)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-cross-file-path
+  category: WS-05
+  cwe: CWE-22
+  severity: HIGH
+  confidence: Potential
+  title_ko: "다른 파일을 거쳐 입력이 파일 경로에 들어가 보여요"
+  tech_name_ko: "파일 간 경로 조작"
+  why_ko: "../ 같은 값이 다른 파일의 함수에서 경로에 붙으면 서버의 다른 파일을 읽거나 덮어쓸 수 있어요."
+  fix_ko: "기준 폴더를 정하고, 합친 경로가 그 폴더 안에 있는지 확인하세요."
+  avoid_ko: "../ 문자열만 지우는 방식으로 막지 마세요."
+  fix_example: |
+    # 수정 후
+    path = (BASE / name).resolve()
+    if not path.is_relative_to(BASE):
+        abort(400)
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-llm-excessive-agency
+  category: WS-09
+  cwe: null
+  owasp_ai: [LLM06]
+  severity: HIGH
+  confidence: Potential
+  title_ko: "LLM에게 확인 없이 위험한 도구 권한을 주고 있어 보여요"
+  tech_name_ko: "LLM 과도한 권한"
+  why_ko: "모델이 프롬프트 주입에 속으면 DB 쓰기·명령 실행 같은 도구를 공격자 뜻대로 쓸 수 있어요."
+  fix_ko: "도구는 필요한 최소 권한만 주고, 되돌릴 수 없는 작업은 사람이 확인한 뒤 실행하세요."
+  avoid_ko: "시스템 프롬프트에 '하지 마'라고 쓰는 것만으로 막지 마세요."
+  fix_example: |
+    # 수정 후: 쓰기 도구는 사용자 확인을 거친다
+    if tool.name in WRITE_TOOLS and not confirmed_by_user(call):
+        return "사용자 확인이 필요해요"
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-unsupported-lang-injection
+  category: WS-05
+  cwe: CWE-74
+  severity: HIGH
+  confidence: Potential
+  title_ko: "입력이 쿼리·명령·HTML에 그대로 들어가 보여요"
+  tech_name_ko: "주입 (정적 규칙이 없는 언어)"
+  why_ko: "요청 값이 쿼리나 명령에 그대로 붙으면 공격자가 그 실행 내용을 바꿀 수 있어요."
+  fix_ko: "그 언어의 파라미터 바인딩·이스케이프 기능을 쓰세요."
+  avoid_ko: "특수문자를 손으로 지우는 방식에 기대지 마세요."
+  fix_example: |
+    // 수정 후 (PHP PDO)
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->execute([$id]);
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."
+
+- id: ai-unsupported-lang-authz
+  category: WS-02
+  cwe: CWE-862
+  severity: HIGH
+  confidence: Potential
+  title_ko: "로그인·권한 확인 없이 쓸 수 있는 기능이 있어 보여요"
+  tech_name_ko: "인가 누락 (정적 규칙이 없는 언어)"
+  why_ko: "서버에서 로그인·권한을 확인하지 않으면 누구나 그 기능을 호출할 수 있어요."
+  fix_ko: "그 라우트에 인증·권한 확인 미들웨어를 적용하세요."
+  avoid_ko: "화면에서 숨기는 것만으로 막지 마세요."
+  fix_example: |
+    // 수정 후 (Go)
+    mux.Handle("/admin/", requireAdmin(adminHandler))
+  limitations_ko: "ChatGPT가 코드를 읽고 판단했어요. 실행해 확인한 결과는 아니에요."

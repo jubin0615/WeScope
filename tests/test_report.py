@@ -44,3 +44,13 @@ def test_web_wording_matches_report():
     js = (RULES_DIR.parent / "web" / "wording.js").read_text(encoding="utf-8")
     for name in ("STATE_KO", "ANALYZER_STATUS_KO", "CHANGE_KO", "OWASP_SCOPE_TITLE", "NOT_A_GUARANTEE", "LIMITS"):
         assert f"export const {name} = {json.dumps(getattr(W, name), ensure_ascii=False)};" in js, name
+
+
+def test_ai_findings_are_marked_in_the_report():
+    """보고서에는 대시보드의 AI 태그가 없으므로 제목에 AI를 붙인다. 이름에는 'ChatGPT 검토'를 넣지 않는다 (태그와 중복)."""
+    from pathlib import Path
+    from wescope.models.scan_result import ScanResult
+    result = ScanResult.from_json((Path(__file__).parent / "fixtures/results/with-fix.json").read_text(encoding="utf-8"))
+    report = render(result)
+    assert "### [CRITICAL] 가격 변조 · AI — 1곳" in report
+    assert "ChatGPT 검토" not in report

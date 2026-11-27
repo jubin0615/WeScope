@@ -13,8 +13,8 @@ class LLMError(RuntimeError):
 class Client(Protocol):
     model: str
 
-    def ask(self, instructions: str, payload: dict) -> dict:
-        """payload(JSON)를 보내고 JSON 객체 하나를 받는다. 실패하면 LLMError."""
+    def ask(self, instructions: str, payload: dict, effort: str) -> dict:
+        """payload(JSON)를 보내고 JSON 객체 하나를 받는다. effort: 추론 강도 (low·medium·high). 실패하면 LLMError."""
 
 
 def connected() -> Client | None:

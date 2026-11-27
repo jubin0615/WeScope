@@ -20,12 +20,24 @@ M1_RULES = {
 }
 
 
-def test_catalog_has_exactly_the_m1_rules():
-    assert set(catalog.rules()) == set(M1_RULES)
+# ChatGPT 보완 탐지 유형 (RULES.md §3) → OWASP. CWE가 없는 유형·목록 밖 CWE는 None
+AI_RULES = {
+    "ai-idor": "A01:2025", "ai-missing-authz": "A01:2025", "ai-client-trusted-identity": "A06:2025",
+    "ai-mass-assignment": "A08:2025", "ai-price-tampering": "A06:2025", "ai-state-skip": "A06:2025",
+    "ai-race-double-spend": "A06:2025", "ai-weak-reset-token": "A07:2025", "ai-account-enumeration": None,
+    "ai-session-fixation": "A07:2025", "ai-insecure-file-access": "A01:2025", "ai-cross-file-injection-sql": "A05:2025",
+    "ai-cross-file-injection-command": "A05:2025", "ai-cross-file-xss": "A05:2025", "ai-cross-file-path": "A01:2025",
+    "ai-llm-excessive-agency": None, "ai-unsupported-lang-injection": "A05:2025", "ai-unsupported-lang-authz": "A01:2025",
+}
+
+
+def test_catalog_has_exactly_the_m1_and_ai_rules():
+    assert set(catalog.rules()) == set(M1_RULES) | set(AI_RULES)
+    assert catalog.rule("ai-llm-excessive-agency")["owasp_ai"] == ["LLM06"]
 
 
 def test_owasp_is_derived_from_cwe_as_documented():
-    for rule_id, expected in M1_RULES.items():
+    for rule_id, expected in {**M1_RULES, **AI_RULES}.items():
         assert owasp.classify(catalog.rule(rule_id)["cwe"]) == expected, rule_id
     assert owasp.classify("CWE-1004") == "A02:2025" and owasp.classify("CWE-1275") == "A01:2025"   # 쿠키 세부 CWE
 

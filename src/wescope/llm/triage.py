@@ -9,11 +9,11 @@ ChatGPT가 주변 코드로 판정한다.
 """
 import ast
 import re
-from pathlib import PurePosixPath
 
-from wescope.llm.context import TOTAL, WHOLE_FILE, excerpt, numbered, span
+from wescope.llm.context import TOTAL, WHOLE_FILE, excerpt, local_imports, numbered, span
 from wescope.llm.guards import Redactor, map_strings, quote_matches, safe_path, suspicious
 
+EFFORT = "medium"            # 추론 강도: 판정 하나라 수정안·보완 탐지보다 낮게 (AI.md §7)
 PROMPT_VERSION = "triage-1"
 AUTO_CHECKS = 20                    # 검사마다 확인하는 발견 수 (스캔당 예산, AI.md §7)
 VERDICTS = ("confirmed", "protected", "unclear")
@@ -56,23 +56,10 @@ def _callees(ctx, finding) -> dict[str, list[int]]:
     start, end = span(ctx, path, finding.location.line)
     called = {node.func.id for node in ast.walk(tree)
               if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and start <= node.lineno <= end}
-    here = PurePosixPath(path).parent
     found: dict[str, list[int]] = {}
-    for node in tree.body:
-        if not isinstance(node, ast.ImportFrom) or not node.module or node.level > 1:
-            continue
-        names = {alias.asname or alias.name: alias.name for alias in node.names}
+    for file, names in local_imports(ctx, path).items():
         wanted = {names[n] for n in called & names.keys()}
-        module = node.module.replace(".", "/") + ".py"
-        sibling = (here / module).as_posix()
-        # 상대 import(.)는 그 패키지 안만. 절대 import는 루트 기준(패키지로 실행)과 같은 폴더(파일을 직접 실행)가
-        # 실행 방식에 따라 갈린다: 한쪽에만 있으면 그것, 둘 다 있으면 어느 쪽인지 모르므로 보내지 않는다
-        # (엉뚱한 함수를 보호 근거로 보내면 protected가 잘못 나올 수 있다. 모르면 unclear가 낫다)
-        found_at = {c for c in ([sibling] if node.level else [module, sibling]) if c in ctx.files}
-        if not wanted or len(found_at) != 1:
-            continue
-        file = found_at.pop()
-        for item in getattr(ctx.python_ast(file), "body", []):
+        for item in getattr(ctx.python_ast(file), "body", []) if wanted else ():
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name in wanted:
                 found.setdefault(file, []).append(item.lineno)
     return found
@@ -126,7 +113,8 @@ def check(session, ctx, finding) -> str:
     """한 발견을 판정해 finding.triage에 붙이고(confirmed면 신뢰도도 올림) 최종 판정을 돌려준다."""
     redactor = Redactor(ctx.secrets.values())
     payload, suspects = triage_payload(ctx, finding, redactor)
-    answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload)
+    answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload, EFFORT,
+                              valid=lambda a: a.get("verdict") in VERDICTS)
     verdict = answer.get("verdict") if answer.get("verdict") in VERDICTS else "unclear"
     text = lambda name: answer[name] if isinstance(answer.get(name), str) else ""
     evidence = answer.get("evidence") if isinstance(answer.get("evidence"), dict) else {}

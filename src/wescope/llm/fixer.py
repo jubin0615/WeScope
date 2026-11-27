@@ -6,6 +6,7 @@ from wescope.llm.context import fix_payload
 from wescope.llm.guards import Redactor, map_strings
 from wescope.llm.verify import verify
 
+EFFORT = "high"              # 추론 강도 (AI.md §7: 수정안·보완 탐지는 높게)
 PROMPT_VERSION = "fix-2"     # fix-2: 이번 rule의 줄만 고친다 (실제 응답에서 다른 묶음의 비밀값 줄까지 고쳤다)
 AUTO_SEVERITIES = ("CRITICAL", "HIGH")
 AUTO_GROUPS = 5                       # 검사 중 자동으로 만드는 묶음 수 (스캔당 예산, AI.md §7)
@@ -61,7 +62,8 @@ def make_fix(session, ctx, group, before, rescan, *, rejected=None) -> dict:
     previous, best = None, None
     for attempt in (1, 2):
         payload, suspect = fix_payload(ctx, group, redactor, previous=previous, rejected=rejected)
-        answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload)
+        answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload, EFFORT,
+                                  valid=lambda a: _shape_error(a) is None)
         problem = _shape_error(answer)
         checks = ({"status": "failed", "apply": False, "syntax": None, "rescan": None, "reasons": [problem]}
                   if problem else verify(ctx.root, answer["diff"], redactor, group, before, rescan))
@@ -70,7 +72,8 @@ def make_fix(session, ctx, group, before, rescan, *, rejected=None) -> dict:
                "instruction_suspect": suspect}
         if best is None or _RANK[fix["verification"]] > _RANK[best["verification"]]:
             best = fix
-        if fix["verification"] == "verified":
+        # 재검사로 판정할 수 없으면(AI 발견·재검사 실패) 다시 물어도 판정이 같다: 요청을 아낀다
+        if fix["verification"] == "verified" or (checks["syntax"] and checks["rescan"] is None):
             break
         previous = {"diff": fix["diff"], "failures": checks["reasons"]}
     best["attempts"] = attempt

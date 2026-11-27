@@ -12,7 +12,10 @@ def sort_key(f: Finding):
 
 
 def code_identity(ctx, hit) -> str:
-    """줄 번호 대신 코드 내용으로 같은 발견을 알아본다. 비밀값은 마스킹한 뒤 쓴다."""
+    """줄 번호 대신 코드 내용으로 같은 발견을 알아본다. 비밀값은 마스킹한 뒤 쓴다.
+    탐지기가 extra["identity"]를 주면 그것을 쓴다 (예: ChatGPT 보완 탐지는 인용 줄이 매번 달라질 수 있어 함수 단위로)."""
+    if hit.extra.get("identity"):
+        return f"{hit.file}|{ctx.secrets.mask(hit.extra['identity'])}"
     if hit.line <= 0:   # 파일 단위 발견
         return f"{hit.file}|{hit.extra.get('kind', '')}"
     lines = (ctx.text(hit.file) or "").splitlines()

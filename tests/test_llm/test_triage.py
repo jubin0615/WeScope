@@ -55,6 +55,7 @@ def test_confirmed_raises_confidence_and_sends_guard_code_without_secrets(app):
     assert by_rule(result)[ADMIN].confidence == "Potential"               # unclear는 그대로
     assert result.ai["triage"] == {"confirmed": 1, "protected": 0, "unclear": 2, "remaining": 0}
 
+    assert fake.efforts["triage"] == {"medium"}
     checks = [r for r in fake.requests if r["task"] == "triage"]
     assert {r["finding"]["rule_id"] for r in checks} == {"authz-idor", ADMIN, "authz-no-auth-write"}
     assert "auth_helpers.py" in [f["path"] for f in checks[0]["files"]]  # 다른 파일의 인증 헬퍼도 함께 보낸다
