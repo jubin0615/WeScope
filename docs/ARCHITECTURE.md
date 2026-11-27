@@ -286,7 +286,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `ai_coverage` | ChatGPT 검토 범위(업무 로직 인가·결제·파일 간 흐름·미지원 언어) 상태 |
 | `findings` | Finding[] |
 | `summary` | 심각도별 개수, new/fixed 개수, 위험 점수 |
-| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model", "requests", "cache_hits", "fixes": {"verified", "partial", "failed"}, "budget_exceeded", "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message"} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
+| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model" (요청 전에 멈췄으면 null), "requests", "cache_hits", "fixes": {"verified", "partial", "failed"}, "budget_exceeded", "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message"} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
 
 ---
 
@@ -317,7 +317,8 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 ~/.wescope/
 ├── config.toml          # 전역 설정 (AI 사용, 자동 검사 AI 동의, 테마) — 대시보드 설정에서 편집
 ├── server.json          # 실행 중인 서버의 포트·PID·접속 티켓 (권한 600, 종료 시 삭제)
-├── auth.json            # ChatGPT 토큰 (권한 600)
+├── auth.json            # ChatGPT 등록(client_id)·토큰. Windows는 DPAPI로 암호화(현재 사용자만 풂), 그 밖은 권한 600
+├── *.lock               # 프로세스 간 잠금: scan(검사 저장)·launch(서버 시작)·auth(토큰 갱신)
 ├── history.sqlite       # 프로젝트·프로젝트별 설정·스캔·발견·오탐 표시 이력
 ├── repos/               # GitHub 주소로 clone한 저장소 (We-Scope 전용, 검사 때 최신으로 맞춤)
 ├── ai-cache/            # ChatGPT 결과 캐시 (코드 해시 기준, 비밀값 없음)
@@ -357,12 +358,13 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 ### 7-1. 구현된 API 형식 (B6 동결)
 
 > 이 표와 `tests/fixtures/results/*.json`이 대시보드와 서버 사이의 계약이다. 바꾸려면 이 표 → 서버 → 샘플·테스트 순으로 바꾼다.
-> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. 표에 없는 행(로그인)은 B8-2에서 추가한다. B7·B8에서 추가한 행은 `(B7)`·`(B8)`로 표시했다.
+> 오류 응답은 모두 `{"detail": "한국어 메시지"}`. B7·B8에서 추가한 행은 `(B7)`·`(B8)`로 표시했다.
 
 | 요청 | 성공 응답 | 실패 |
 |---|---|---|
 | `GET /?ticket=…` | `303 → /` + `wescope_ticket` 쿠키 (HttpOnly, SameSite=Strict) | 401 |
 | `GET /healthz` (티켓 불필요) | `{"app": "wescope", "pid": 1234}` | — |
+| `GET /auth/callback` (B8, 티켓 불필요) | OpenAI 승인 뒤 브라우저가 돌아오는 곳. 처음 연결이면 등록 결과(`client_id`)를 저장하고 `303 →` 로그인 승인 주소, 로그인이면 code를 토큰으로 바꿔 저장하고 "연결했어요" 페이지. SameSite=Strict 쿠키가 실리지 않는 요청이라 티켓 대신 이번 시도의 `state`(1회용, 5분)·PKCE·nonce로 확인 | 400 페이지 (state 불일치·만료, 승인 거절, 계정 확인 실패) |
 | `GET /api/state` | `{"repos": 2, "last_repo": "<repo_id>" \| null, "running": Job \| null, "latest_scan": "<scan_id>" \| null}` — `latest_scan`(B7)은 모든 저장소 중 마지막 검사. 화면은 5초마다 확인해 처음 보는 `running`은 SSE로 지켜보고, `latest_scan`이 바뀌면 목록·결과를 다시 읽는다 (커밋 자동 검사를 알림 없이 반영) | — |
 | `GET /api/catalog` (F3 추가) | `{"ws": [{"code": "WS-01", "name_ko": "비밀값 노출"}, …], "owasp": [{"code": "A01:2025", "name": "Broken Access Control"}, …]}` — 화면이 코드값에 붙이는 이름 | — |
 | `GET /api/repos` | `[Repo, …]` | — |
@@ -382,6 +384,9 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `DELETE /api/repos/{id}/ignores/{fingerprint}` (B7) | `204` — 다음 검사부터 다시 `open` | 404 |
 | `GET /api/settings` (B7, B8에서 `ai_*` 추가) | `{"theme": "system"\|"light"\|"dark", "ai_level": "deep"\|"basic"\|"off", "ai_on_hook": bool}` — `~/.wescope/config.toml`. 기본 `system`·`deep`·`false`. `ai_on_hook`이 false면 커밋 자동 검사에서는 ChatGPT를 쓰지 않는다 (AI.md §2) | — |
 | `POST /api/settings` (B7, 보낸 항목만 바뀜) | 위와 같은 형식 | 400 (허용 값 아님) |
+| `GET /api/auth` (B8) | `{"state": "login"\|"plan"\|"ready", "message"}` — 저장된 토큰만 보고 네트워크는 쓰지 않는다. `plan`은 구독 사용 승인이 없음. 마지막 연결 시도가 실패했으면 그 이유가 `message` | — |
+| `POST /api/auth/login` (B8) | `{"url": "https://auth.openai.com/…"}` — 화면이 새 탭으로 연다. 다시 부르면 앞 시도는 무효 | — |
+| `POST /api/auth/logout` (B8) | `204` — 이 PC의 토큰만 지운다 (등록·ChatGPT 쪽 앱 연결은 그대로) | — |
 | `POST /api/scans/{scan_id}/groups/{rule_id}/fix` `{"retry"?: bool}` (B8) | `202 {"scan_id"}` — [수정안 만들기]·`retry`면 [다른 수정안](지금 diff를 채택하지 않음으로 넘김). 작업 큐에서 지금 파일 기준으로 만들고 그 검사의 결과 JSON 대표 발견 `fix`에 붙여 다시 저장한다. 진행은 같은 `/api/scans/{scan_id}/events` (Job `rule_id`가 채워짐) | 404 (검사 없음, 그 규칙의 열린 발견 없음), 409 (가장 최근 검사가 아님, ChatGPT 연결 전) |
 
 - **Repo**: `{"id", "kind": "folder"|"github", "location", "branch", "name", "disabled_rules", "excludes", "created_at", "hook": bool | null, "last_scan": ScanSummary | null}` — `hook`(B7)은 hook 파일에서 바로 읽은 자동 검사 켜짐 여부, 로컬 Git 폴더가 아니거나 hook이 `.git` 밖이면 `null`. 로컬 Git 폴더는 연결할 때 켠다 (PRD P6 기본 켬)

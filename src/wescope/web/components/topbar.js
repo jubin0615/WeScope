@@ -65,6 +65,14 @@ function statusLine({ repo, result, job, failed, offline }, { openCoverage }) {
     skipped && h("button", { type: "button", className: "link status-warn", textContent: "일부 검사 건너뜀", onclick: openCoverage }));
 }
 
+// ChatGPT 연결 상태 (DASHBOARD.md 8-8). 연결 전에는 누르면 새 탭에서 로그인. 로그아웃·분석 수준은 설정 창(F4)
+function chatgpt(auth, { connectChatGPT }) {
+  if (!auth) return null;
+  if (auth.state === "ready") return h("span", { className: "chatgpt chatgpt-on", title: auth.message, textContent: "◉ ChatGPT" });
+  return h("button", { type: "button", className: "link chatgpt", title: auth.message,
+    textContent: "○ ChatGPT 연결 안 함", onclick: connectChatGPT });
+}
+
 export function renderTopbar(el, view, actions) {
   const rescan = h("button", { type: "button", className: "btn btn-primary",
     textContent: view.job ? "검사 중…" : "다시 스캔", disabled: Boolean(view.job || view.offline) });
@@ -74,5 +82,6 @@ export function renderTopbar(el, view, actions) {
     projectMenu(view, actions),
     statusLine(view, actions),
     h("span", { className: "spacer" }),
+    chatgpt(view.auth, actions),
     rescan);
 }

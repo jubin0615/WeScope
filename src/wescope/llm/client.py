@@ -1,4 +1,4 @@
-"""ChatGPT 클라이언트 인터페이스. 실제 구현(Sign in with ChatGPT)은 B8-2, 테스트는 tests/test_llm/fake_chatgpt.py."""
+"""ChatGPT 클라이언트 인터페이스. 실제 구현은 llm/chatgpt.py(로그인은 llm/auth.py), 테스트는 tests/test_llm/fake_chatgpt.py."""
 from typing import Protocol
 
 
@@ -18,5 +18,6 @@ class Client(Protocol):
 
 
 def connected() -> Client | None:
-    """로그인한 ChatGPT 클라이언트. 로그인 전·B8-2 전에는 None (AI 단계를 건너뛴다)."""
-    return None
+    """로그인한 ChatGPT 클라이언트, 로그인 전이면 None (AI 단계를 건너뛴다). 네트워크는 쓰지 않는다 (첫 요청 때 쓴다)."""
+    from wescope.llm import auth, chatgpt      # auth·chatgpt가 이 모듈의 LLMError를 쓰므로 여기서 불러온다
+    return chatgpt.ChatGPT() if auth.status()["state"] == "ready" else None

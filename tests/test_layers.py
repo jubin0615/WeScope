@@ -20,6 +20,8 @@ FORBIDDEN = {
     "store": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.report"),
     "report": ("wescope.analyzers", "wescope.engine", "wescope.scan", "wescope.store", "wescope.collector"),
 }
+# 금지 아래에서 예외로 허용하는 모듈: 프로세스 간 잠금은 저장 계층이 아니라 공용 도구다 (토큰 갱신을 hook과 나눠 잠근다)
+ALLOWED = {"llm": ("wescope.store.lock",)}
 
 
 def imports(path: Path) -> set[str]:
@@ -36,5 +38,6 @@ def test_dependency_direction():
     violations = []
     for package, banned in FORBIDDEN.items():
         for path in (SRC / package).rglob("*.py"):
-            violations += [f"{path.relative_to(SRC)} → {name}" for name in imports(path) if name.startswith(banned)]
+            violations += [f"{path.relative_to(SRC)} → {name}" for name in imports(path)
+                           if name.startswith(banned) and name not in ALLOWED.get(package, ())]
     assert violations == []
