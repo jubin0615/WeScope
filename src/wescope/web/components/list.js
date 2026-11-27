@@ -22,6 +22,8 @@ export function groups(findings, tab, severity = null) {
   return [...byRule.values()].map((g) => ({
     ...g,
     severity: SEVERITIES.find((s) => g.findings.some((f) => f.severity === s)),
+    // 수정안은 규칙마다 하나(서버가 열린 대표 발견에 붙임). 심각도 거르기로 대표가 빠져도 보이게 전체 발견에서 찾는다
+    fix: findings.find((f) => f.rule_id === g.rule_id && open(f) && f.fix)?.fix ?? null,
   }));
 }
 
@@ -55,8 +57,7 @@ export const VERIFY = {
   partial: ["◐ 문법 확인", "◐ 문법 확인 — 적용·문법은 통과했지만 재검사로는 확인하지 못했어요", "icon-warn"],
   failed: ["✕ 검증 안 됨", "✕ 검증 안 됨 — 참고용이에요", "icon-muted"],
 };
-// 묶음의 수정안 = 대표 발견(서버가 고른 묶음의 첫 발견)에 붙은 fix
-export const groupFix = (group) => group.findings.find((f) => f.fix)?.fix ?? null;
+export const groupFix = (group) => group.fix ?? null;
 const shorten = (text, max = 44) => (text.length > max ? `…${text.slice(-(max - 1))}` : text);
 
 export function renderList(el, { list, tab, selected, firstScan, onSelect }) {

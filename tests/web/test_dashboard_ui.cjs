@@ -156,3 +156,14 @@ test("diff 줄 색과 설정 창 제외 패턴 정리", async () => {
   const { parseLines } = await load("components/settings.js");
   assert.deepEqual(parseLines(" dist/ \r\n\n*.min.js\n  "), ["dist/", "*.min.js"]);
 });
+
+test("수정안: 심각도 거르기로 대표 발견이 빠져도 규칙의 수정안을 찾는다", async () => {
+  const { groups, groupFix } = await load("components/list.js");
+  const result = structuredClone(fixture("secrets-git.json"));
+  const env = result.findings.filter((f) => f.rule_id === "secret-env-file");
+  assert.deepEqual(env.map((f) => f.severity), ["CRITICAL", "HIGH"]);
+  env[0].fix = { verification: "verified", diff: "--- a/x\n+++ b/x\n" };            // 서버는 대표(첫) 발견에 붙인다
+  const high = groups(result.findings, "all", "HIGH").find((g) => g.rule_id === "secret-env-file");
+  assert.deepEqual(high.findings.map((f) => f.severity), ["HIGH"]);                  // 보이는 위치는 거른 그대로
+  assert.equal(groupFix(high)?.verification, "verified");
+});

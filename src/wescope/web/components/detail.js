@@ -199,7 +199,7 @@ function actionBar({ group, tab, repo, result, ignores, busy, actions }) {
 export function renderDetail(el, { group, tab, firstScan, names, repo, result, ignores = {}, busy = false, actions }) {
   const f = group.findings[0];
   const fix = groupFix(group);
-  const suspect = group.findings.some((x) => x.triage?.instruction_suspect || x.fix?.instruction_suspect);
+  const suspect = fix?.instruction_suspect || group.findings.some((x) => x.triage?.instruction_suspect);
   const suggested = tab !== "dismissed" && group.findings.some((x) => x.triage?.suggested === "dismiss");
   const head = h("header", { className: "detail-head" },
     h("p", { className: "detail-tags" },
