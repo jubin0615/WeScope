@@ -113,3 +113,11 @@ def test_router_prefix_follows_the_router_variable(tmp_path):
     labels = {h.extra["route"] for h in hits}
     assert "GET /manage/users/" in labels and "GET /v1/comments/<pk>/" in labels
     assert not any(label.startswith(("GET /users", "GET /manage/comments", "GET /v1/users")) for label in labels)
+
+
+def test_drf_default_comes_only_from_settings(tmp_path):
+    """테스트 파일 등 다른 dict에 같은 키가 있어도 settings의 REST_FRAMEWORK만 앱 설정이다."""
+    hits = run(tmp_path, RoutesAnalyzer(), {
+        "shop/urls.py": DRF_URLS, "shop/views.py": DRF_VIEW, "mysite/settings.py": "REST_FRAMEWORK = {}\n",
+        "tests/test_api.py": 'OVERRIDE = {"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"]}\n'})
+    assert "authz-no-auth-write" in {h.rule_id for h in hits}

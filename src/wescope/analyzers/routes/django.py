@@ -104,7 +104,8 @@ def routes(files: dict[str, tuple[str, ast.Module]]) -> list[Route]:
 
 
 def _lineage(files, defs, file, node, seen=()):
-    """클래스와 저장소 안에 정의된 부모 클래스들 [(파일, ClassDef)] — 부모에 둔 permission_classes·메서드도 물려받는다."""
+    """클래스와 저장소 안에 정의된 부모 클래스들 [(파일, ClassDef)] — 부모에 둔 permission_classes·메서드도 물려받는다.
+    shortcut: 깊이 우선 순서라 다이아몬드 상속에선 Python MRO와 다를 수 있다. 실제 앱에서 보이면 C3로."""
     chain = [(file, node)]
     for base in node.bases:
         parent = _pick(defs.get(_name(base), []), file)
@@ -160,7 +161,9 @@ def _class_routes(files, defs, file, node, url, router, login, drf_default) -> l
             found.append(_route(meth_file, files[meth_file][0], meth, [name.upper()], url, f"{node.name}.{name}", outer))
     for action in sorted(_implicit(bases)):
         http, detail, write = _ACTIONS[action]
-        if not drf:                                   # Django 제네릭 뷰는 쓰기를 POST 폼으로 받는다
+        # Django 제네릭 뷰는 쓰기를 POST 폼으로 받는다.
+        # shortcut: UpdateView·DeleteView가 post()만 덮어쓰면 상속받은 GET 화면의 조회는 보지 않는다. 실제 앱에서 보이면 GET을 따로
+        if not drf:
             http = "POST" if write else "GET"
         if http.lower() not in methods:
             found.append(_implicit_route(files, file, node, lineage, methods, action, [http], url, detail, write, outer))
@@ -202,11 +205,14 @@ def _assigns(node, name) -> bool:
 
 
 def _drf_default(files) -> str:
-    """settings REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]의 클래스 이름. 없으면 DRF 기본값 AllowAny(= 단서 없음)."""
+    """settings REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]의 클래스 이름. 없으면 DRF 기본값 AllowAny(= 단서 없음).
+    `REST_FRAMEWORK = {...}` 대입문 안의 키만 본다 (테스트·다른 dict의 같은 키는 앱 설정이 아니다)."""
     for _, tree in files.values():
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Dict) and any(_str(k) == "DEFAULT_PERMISSION_CLASSES" for k in node.keys):
-                value = node.values[[_str(k) for k in node.keys].index("DEFAULT_PERMISSION_CLASSES")]
+        for node in tree.body:
+            if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)
+                    and any(_name(t) == "REST_FRAMEWORK" for t in node.targets)
+                    and "DEFAULT_PERMISSION_CLASSES" in (keys := [_str(k) for k in node.value.keys])):
+                value = node.value.values[keys.index("DEFAULT_PERMISSION_CLASSES")]
                 names = [(_str(e) or ast.unparse(e)).split(".")[-1] for e in ast.walk(value) if _str(e) or isinstance(e, ast.Name)]
                 return " ".join(n for n in names if n != "AllowAny")
     return ""

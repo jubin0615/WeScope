@@ -72,7 +72,7 @@
 | `authz-spring-policy` | Spring MVC 관리자 경로를 `SecurityFilterChain` 첫 일치 규칙·`@PreAuthorize`와 대조 (기존 구현 이식) | HIGH | P | CWE-862 | A01 | M4 |
 
 **지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Django(`urls.py`의 `path`·`re_path`·`include` → 함수 view·클래스 view 메서드, 가드 `@login_required`·`@permission_required`·`@user_passes_test`·`@staff_member_required`·`LoginRequiredMixin`·DRF `permission_classes`(클래스 이름으로 판정: `IsAuthenticated`는 로그인, `IsAdminUser`는 관리자, `AllowAny`는 가드 아님)·settings `MIDDLEWARE`에 들어 있는 `LoginRequiredMiddleware`, 한 view가 여러 URL에 걸리면 URL마다 판정, DRF `router.register` ViewSet(`list`·`create`·`retrieve`·`update`·`destroy`·`@action`)과 상속받은 동작으로 일하는 제네릭 뷰(`DetailView`·`UpdateView`·`DeleteView`·`CreateView`·`ListView`, DRF `generics.*APIView`·`ModelViewSet`)는 `get_queryset`·`queryset`과 상속받은 조회·저장·삭제로 판정, 저장소 안의 부모 클래스에 둔 권한도 물려받음, settings `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`(없으면 DRF 기본값 AllowAny), 메서드는 `@require_POST`·`@require_http_methods`·`@api_view`·본문의 `request.method`/`request.POST`로 추정) — B9 / Next.js App Router — M4 / Spring MVC — M4.
-**한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P. 관리자 단서 중 `is_staff=True`·`is_admin=True`처럼 값을 넣는 인자와 `create_superuser()`는 확인으로 보지 않는다. Django는 `path()`에 `ViewSet.as_view({...})`로 직접 건 ViewSet을 아직 라우트로 보지 않는다.
+**한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P. 관리자 단서 중 `is_staff=True`·`is_admin=True`처럼 값을 넣는 인자와 `create_superuser()`는 확인으로 보지 않는다. Django는 `path()`에 `ViewSet.as_view({...})`로 직접 건 ViewSet을 아직 라우트로 보지 않는다. 부모 클래스 권한은 깊이 우선으로 찾아 다이아몬드 상속에선 Python MRO와 다를 수 있고, `UpdateView`·`DeleteView`가 `post()`만 덮어쓰면 상속받은 GET 화면의 조회는 보지 않는다.
 
 ---
 
