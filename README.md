@@ -2,8 +2,6 @@
   <img src="docs/assets/wescope-banner.svg" alt="WeScope — 바이브코딩으로 만든 웹앱을 위한 로컬 보안 진단 도구" width="100%">
 </p>
 
-# We-Scope
-
 **바이브코딩으로 만든 웹앱의 보안 실수를 내 PC에서 찾고, 왜 위험한지와 어떻게 고치는지를 한국어로 알려 줍니다.**
 
 We-Scope는 AI 코딩 도구로 만든 웹 애플리케이션 저장소를 사용자 PC에서 분석하는 로컬 대시보드형 보안 진단 도구입니다. 보안 취약점 후보를 **We-Scope Top 10**과 **OWASP Top 10:2025** 기준으로 분류하고, 사용자 본인의 ChatGPT 구독을 연결하면 **로컬에서 적용·문법·재검사까지 확인한 수정안(diff)** 을 함께 만들어 줍니다.
@@ -530,9 +528,3 @@ node --test tests/web/test_dashboard_ui.cjs
 | [docs/RULES.md](docs/RULES.md) | 규칙별 탐지 조건·심각도·신뢰도 |
 | [docs/AI.md](docs/AI.md) | ChatGPT 분석 설계: 역할, 전송 범위, 가드, 검증 |
 | [docs/DIRECTORY_STRUCTURE.md](docs/DIRECTORY_STRUCTURE.md) | 폴더 구조 |
-
----
-
-## 라이선스
-
-MIT License
