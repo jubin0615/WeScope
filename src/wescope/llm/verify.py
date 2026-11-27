@@ -112,4 +112,9 @@ def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
         reasons.append("재검사를 끝까지 하지 못했어요: " + ", ".join(incomplete))
     checks["rescan"] = not remaining and not new and not incomplete
     checks["status"] = "verified" if checks["rescan"] else "partial"
+    if group[0].source == "ai":
+        # 정적 재검사는 ChatGPT가 찾은 발견을 원래 못 찾으므로 '사라졌다'가 고쳤다는 뜻이 아니다 (AI.md §3-4).
+        # 새 위험이 생겼는지는 위에서 그대로 봤다. 판정 불가(None)로 두고 partial
+        reasons.insert(0, "정적 분석으로는 다시 확인할 수 없는 ChatGPT 발견이에요 (적용·문법만 확인했어요)")
+        checks["rescan"], checks["status"] = None, "partial"
     return checks

@@ -71,7 +71,8 @@ def make_fix(session, ctx, group, before, rescan, *, rejected=None) -> dict:
                "instruction_suspect": suspect}
         if best is None or _RANK[fix["verification"]] > _RANK[best["verification"]]:
             best = fix
-        if fix["verification"] == "verified":
+        # 재검사로 판정할 수 없으면(AI 발견·재검사 실패) 다시 물어도 판정이 같다: 요청을 아낀다
+        if fix["verification"] == "verified" or (checks["syntax"] and checks["rescan"] is None):
             break
         previous = {"diff": fix["diff"], "failures": checks["reasons"]}
     best["attempts"] = attempt

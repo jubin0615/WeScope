@@ -135,3 +135,32 @@ def test_ai_findings_not_rechecked_are_unknown_not_fixed(logic):
                    encoding="utf-8")
     fixed, _ = scan(logic, lambda p: [], previous=first)
     assert ai_findings(fixed)["ai-price-tampering"].change == "fixed"
+
+
+def test_fix_for_an_ai_finding_is_never_verified_by_static_rescan(logic):
+    """정적 재검사는 AI 발견을 원래 못 찾는다: 주석만 단 수정안도 '문제가 사라졌다'로 보인다. 그래서 partial로 두고
+    (AI.md §3-4), 다시 물어도 판정이 같으므로 재요청하지 않는다."""
+    from fake_chatgpt import replace_lines
+    found = lambda p: [at(p, "app.py", 'request.json["unit_price"]', vuln_type="price-tampering")]
+    comment = lambda p: answer(replace_lines(p, "app.py", {'request.json["unit_price"]':
+                                                           '    total = float(request.json["unit_price"]) * quantity  # ok'}))
+    fake = FakeChatGPT(comment, review=lambda p: {"findings": found(p)})
+    fix = ai_findings(run_scan(Target("folder", str(logic)), ai=fake))["ai-price-tampering"].fix
+    assert fix["verification"] == "partial" and fix["checks"]["rescan"] is None and fix["attempts"] == 1
+    assert "정적 분석으로는 다시 확인할 수 없는" in fix["checks"]["reasons"][0]
+
+
+def test_previous_ai_finding_outside_the_sent_excerpt_is_unknown(logic, monkeypatch):
+    """큰 파일은 발췌만 보낸다. 직전 AI 발견이 보낸 줄 밖이면 모델이 못 본 것이니 고쳐짐이 아니라 확인 불가."""
+    path = logic / "services.py"
+    filler = "".join(f"\n\ndef helper_{n}(x):\n    return x + {n}\n" for n in range(40))
+    path.write_text(path.read_text(encoding="utf-8") + filler + "\n\nSTORE = {}\n\n\ndef cached_item(key):\n    return STORE[key]\n",
+                    encoding="utf-8")
+    first, _ = scan(logic, lambda p: [at(p, "services.py", "return STORE[key]", vuln_type="idor")])
+    monkeypatch.setattr(review, "WHOLE_FILE", 50)                                # 큰 파일처럼: 발췌만 보낸다
+    app = logic / "app.py"
+    app.write_text(app.read_text(encoding="utf-8") + "\n", encoding="utf-8")      # 다시 묻게
+    again, fake = scan(logic, lambda p: [], previous=first)
+    sent = [f for r in fake.requests if r["task"] == "review" for f in r["files"] if f["path"] == "services.py"]
+    assert sent and sent[0]["excerpt"] and "STORE[key]" not in sent[0]["content"]
+    assert ai_findings(again)["ai-idor"].change == "unknown"

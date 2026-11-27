@@ -67,9 +67,10 @@ def run_scan(target: Target, *, previous: ScanResult | None = None, ignored=froz
             progress("ai")
             ai_hits = run.review(findings, ctx, progress=progress)
             findings = sorted(findings + review.adopt(normalize(ai_hits, ctx)), key=sort_key)
-        reviewed = run.seen if run else set()
+        # 직전 AI 발견은 이번에 그 줄을 모델에 보냈을 때만 고쳐짐·그대로를 판단한다. 아니면 확인 불가
+        saw = run.saw if run else (lambda path, line: False)
         findings = compare(findings, previous, ctx.partial_files, ctx.source.get("commit"), ctx.excluded,
-                           unchecked=lambda old: old.source == "ai" and old.location.file not in reviewed)
+                           unchecked=lambda old: old.source == "ai" and not saw(old.location.file, old.location.line))
         summary = None
         if run is not None:
             progress("ai")

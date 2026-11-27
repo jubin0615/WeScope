@@ -135,6 +135,14 @@ def review_payload(ctx, target, findings, redactor) -> tuple[dict, set[str]]:
     return hidden, {f["path"] for f in hidden["files"] if suspicious(f["content"])}
 
 
+def sent_line_numbers(sent: dict) -> set[int] | None:
+    """보낸 파일 하나에서 실제로 보낸 줄 번호. 파일 전체면 None (전부)."""
+    if not sent["excerpt"]:
+        return None
+    rows = (row.split("|", 1)[0].strip() for row in sent["content"].splitlines() if "|" in row)
+    return {int(number) for number in rows if number.isdigit()}
+
+
 def check_answer(ctx, answer, sent: set[str], findings, redactor, suspects, key) -> tuple[list[RawHit], int, int]:
     """응답 → (새 AI 발견 RawHit들, 정적 발견에 근거로 붙인 수, 버린 수)."""
     types = vuln_types()

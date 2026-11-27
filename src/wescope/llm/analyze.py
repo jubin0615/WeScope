@@ -35,7 +35,9 @@ class Run:
         self.level = level
         self.going = True
         self.reviewed: set[str] = set()          # 이번에 보완 탐지를 끝까지 한 대상 파일 (검사 범위 표)
-        self.seen: set[str] = set()              # 그때 함께 보낸 파일까지 (직전 AI 발견을 '고쳐짐'으로 판단해도 되는 파일)
+        # 실제로 모델에 보낸 줄 {파일: 줄 번호들, 파일 전체면 None}. 직전 AI 발견을 '고쳐짐'으로 판단해도 되는 곳
+        # (큰 파일은 발췌만 보내므로 파일 단위로 보면 모델이 못 본 발견까지 고쳐짐이 된다)
+        self.seen: dict[str, set[int] | None] = {}
         self.coverage = []                       # 검사 범위 표의 AI 검토 행 (심층일 때만)
         self.summary = {"level": level, "model": None, "requests": 0, "cache_hits": 0, "review": None,
                         "triage": {"confirmed": 0, "protected": 0, "unclear": 0, "remaining": 0},
@@ -64,11 +66,18 @@ class Run:
             counts["discarded"] += dropped
             counts["targets"] += 1
             self.reviewed.add(target["path"])
-            self.seen.update([target["path"], *target["with"]])
+            for sent in payload["files"]:
+                lines = review.sent_line_numbers(sent)
+                old = self.seen.get(sent["path"], set())
+                self.seen[sent["path"]] = None if lines is None or old is None else old | lines
 
         self.going = _each(candidates[:limit], "review", look, self.summary, progress)
         self.coverage = review.coverage(candidates, self.reviewed, hits)
         return hits
+
+    def saw(self, path: str, line: int) -> bool:
+        """이번 보완 탐지에서 그 줄을 모델에 보냈는가."""
+        return path in self.seen and (self.seen[path] is None or line in self.seen[path])
 
     def check_and_fix(self, findings, ctx, rescan, *, skip=lambda f: False, progress=lambda *a, **k: None,
                       checks: int | None = None, groups: int | None = None) -> dict:
