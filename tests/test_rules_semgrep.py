@@ -29,3 +29,16 @@ def test_semgrep_samples():
     assert got & ok == set(), "안전 표본 오탐"
     assert got - expect == set(), "표시하지 않은 발견"
     assert react and react[0].confidence == "Potential"   # 흐름을 보지 못한 React 패턴은 부재 추정
+
+
+@pytest.mark.skipif(not shutil.which("semgrep"), reason="semgrep 미설치")
+def test_rescan_runs_only_on_changed_files():
+    """수정안 재검사(ctx.changed)는 바뀐 파일만 본다. 규칙이 파일 하나 안에서만 보므로 그 파일의 결과는 전체 검사와 같다."""
+    with collect(Target("folder", str(SAMPLES))) as ctx:
+        full = {(h.file, h.line, h.rule_id) for h in SemgrepAnalyzer().run(ctx).hits}
+        ctx.changed = frozenset({"inject_js.js"})
+        only = {(h.file, h.line, h.rule_id) for h in SemgrepAnalyzer().run(ctx).hits}
+        ctx.changed = frozenset({"tests/test_app.py"})        # 테스트 파일은 전체 검사처럼 빠진다
+        skipped = SemgrepAnalyzer().run(ctx)
+    assert only and only == {h for h in full if h[0] == "inject_js.js"}
+    assert skipped.hits == [] and skipped.status == "ok"

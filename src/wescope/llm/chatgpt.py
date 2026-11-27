@@ -9,7 +9,7 @@ from wescope.llm import auth
 from wescope.llm.client import LLMError
 
 MAX_TEXT = 200_000        # 응답 글자 수 상한 (수정안 diff 상한 MAX_DIFF의 두 배)
-DEADLINE = 180            # 응답 하나를 다 받을 때까지 기다리는 초
+DEADLINE = 300            # 응답 하나를 다 받을 때까지 기다리는 초 (추론 강도 high 수정안은 3분을 넘기기도 한다)
 _KINDS = {401: "login", 403: "plan", 429: "limit"}
 _MESSAGES = {401: "ChatGPT 연결이 만료됐어요. 다시 연결하세요",
              403: "ChatGPT 구독 사용 자격이 없어요. Plus 이상 구독이 필요해요",
@@ -48,11 +48,11 @@ def _request(method: str, path: str, *, data: bytes | None = None, accept="appli
 
 
 def collect(lines) -> str:
-    """SSE 줄들 → 모델이 낸 글 전체. 완료 이벤트가 오기 전에 끊기거나 너무 길면 LLMError."""
+    """SSE 줄들 → 모델이 낸 글 전체. 완료 이벤트가 오기 전에 끊기거나 너무 길면 LLMError (원인별 문구)."""
     chunks, size, deadline = [], 0, time.monotonic() + DEADLINE
     for line in lines:
         if time.monotonic() > deadline:
-            break
+            raise LLMError(f"ChatGPT 응답이 {DEADLINE // 60}분 안에 끝나지 않았어요")
         line = line.strip()
         if not line.startswith(b"data:"):
             continue
@@ -64,13 +64,15 @@ def collect(lines) -> str:
         if kind == "response.output_text.delta" and isinstance(event.get("delta"), str):
             size += len(event["delta"])
             if size > MAX_TEXT:
-                break
+                raise LLMError("ChatGPT 응답이 너무 길어요")
             chunks.append(event["delta"])
         elif kind == "response.completed":
             return "".join(chunks)
-        elif kind in ("error", "response.failed", "response.incomplete"):
-            break
-    raise LLMError("ChatGPT 응답을 끝까지 받지 못했어요")
+        elif kind == "response.incomplete":
+            raise LLMError("ChatGPT가 응답을 쓰다가 멈췄어요 (출력 한도)")
+        elif kind in ("error", "response.failed"):
+            raise LLMError("ChatGPT 쪽에서 응답 생성이 실패했어요")
+    raise LLMError("응답 도중 ChatGPT 연결이 끊겼어요")
 
 
 def parse(text: str) -> dict:

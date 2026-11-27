@@ -69,7 +69,9 @@ function statusLine({ repo, result, job, failed, offline }, { openCoverage }) {
   if (repo.kind === "github" && repo.branch) parts.push(repo.branch);
   const ai = result.ai;   // 한도·자격·예산 때문에 ChatGPT 분석을 다 못 했으면 그 사유 (DASHBOARD.md §6)
   const left = (ai?.remaining_groups ?? 0) + (ai?.triage?.remaining ?? 0) + (ai?.review?.remaining ?? 0);
-  if (ai?.error) parts.push(`ChatGPT: ${ai.error.message}`);
+  // kind "error"는 그 항목만 건너뛰고 나머지는 끝냈다: 전체 실패처럼 읽히지 않게 건너뛴 수를 앞에 둔다
+  if (ai?.error?.kind === "error" && ai.error.skipped) parts.push(`ChatGPT: ${ai.error.skipped}건 건너뜀 (${ai.error.message})`);
+  else if (ai?.error) parts.push(`ChatGPT: ${ai.error.message}`);
   else if (ai?.budget_exceeded) parts.push(`ChatGPT: 검토를 다 하지 못했어요 (${left}개 남음)`);
   const skipped = result.analyzers.some((a) => a.status === "skipped" || a.status === "failed");
   return h("p", { className: "status", title: new Date(result.scanned_at).toLocaleString("ko-KR") },

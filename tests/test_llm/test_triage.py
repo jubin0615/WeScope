@@ -172,7 +172,7 @@ def test_unexpected_error_on_one_item_keeps_the_scan(app, monkeypatch):
         return real(session, ctx, finding)
     monkeypatch.setattr(triage, "check", breaks_on_idor)
     result, fake = scan(root, lambda rule, p: verdict("unclear"))
-    assert result.ai["error"] == {"kind": "error", "message": "ChatGPT 결과를 처리하지 못했어요 (TypeError)"}
+    assert result.ai["error"] == {"kind": "error", "message": "ChatGPT 결과를 처리하지 못했어요 (TypeError)", "skipped": 1}
     assert result.ai["triage"]["unclear"] == 2 and any(r["task"] == "fix" for r in fake.requests)
     assert by_rule(result)["authz-idor"].triage is None
 

@@ -9,6 +9,8 @@ import subprocess
 import sysconfig
 from pathlib import Path
 
+import pathspec
+
 from wescope.analyzers.base import Analyzer, AnalyzerResult, ToolMissing
 from wescope.models.finding import RawHit
 from wescope.paths import RULES_DIR
@@ -16,6 +18,7 @@ from wescope.paths import RULES_DIR
 # 테스트·예제 코드는 주입 검사에서 뺀다 (secrets의 테스트 파일 필터와 같은 기준)
 _IGNORE = "\n".join(["tests/", "test/", "__tests__/", "fixtures/", "*.test.*", "*.spec.*", "test_*.py", "*_test.py",
                      ".semgrepignore"]) + "\n"
+_IGNORED = pathspec.PathSpec.from_lines("gitwildmatch", _IGNORE.splitlines())
 
 
 class SemgrepAnalyzer(Analyzer):
@@ -32,9 +35,15 @@ class SemgrepAnalyzer(Analyzer):
             raise ToolMissing("semgrep이 설치되어 있지 않아요")
         # 사용자 저장소의 .semgrepignore나 semgrep 기본값에 결과가 흔들리지 않게 임시 스냅샷에 고정 목록을 쓴다
         (ctx.root / ".semgrepignore").write_text(_IGNORE, encoding="utf-8")
+        targets = ["."]
+        if ctx.changed is not None:
+            # 규칙이 모두 파일 하나 안에서만 보므로 바뀐 파일만 돌려도 그 파일의 결과는 같다. 이름으로 넘긴 파일도 같은 목록으로 거른다
+            targets = [f"./{p}" for p in sorted(ctx.changed) if not _IGNORED.match_file(p)]
+            if not targets:
+                return AnalyzerResult([])
         proc = subprocess.run(
             [exe, "scan", "--config", str(RULES_DIR / "semgrep"), "--json", "--metrics=off", "--disable-version-check",
-             "--no-git-ignore", "--quiet", "--timeout", "30", "."],
+             "--no-git-ignore", "--quiet", "--timeout", "30", *targets],
             cwd=ctx.root, capture_output=True, text=True, encoding="utf-8", timeout=600,
             env={**os.environ, "PYTHONUTF8": "1"})   # Windows 한국어 로케일(cp949)에서 한글 규칙 파일을 읽기 위해
         try:

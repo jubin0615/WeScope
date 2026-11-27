@@ -47,7 +47,7 @@ def syntax_error(path: Path) -> str | None:
 def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
     """→ {"status": verified|partial|failed, "apply", "syntax", "rescan", "reasons": [...]}.
     group: 고치려는 발견들, before: 이번 검사의 전체 발견,
-    rescan(folder) → (그 폴더의 발견 목록, 원래 검사에서는 끝났는데 이번엔 끝까지 못 돈 탐지기 id 목록)."""
+    rescan(folder, 바뀐 파일들) → (그 폴더의 발견 목록, 원래 검사에서는 끝났는데 이번엔 끝까지 못 돈 탐지기 id 목록)."""
     checks = {"status": "failed", "apply": False, "syntax": None, "rescan": None, "reasons": []}
     reasons = checks["reasons"]
     group_files = {f.location.file for f in group}
@@ -92,7 +92,7 @@ def verify(root: Path, diff: str, redactor, group, before, rescan) -> dict:
             return checks
 
         try:
-            after, incomplete = rescan(copy)
+            after, incomplete = rescan(copy, touched)
         except Exception as error:   # 재검사가 안 되면 적용·문법까지만 확인된 것
             reasons.append(f"재검사를 하지 못했어요: {type(error).__name__}")
             checks["status"] = "partial"

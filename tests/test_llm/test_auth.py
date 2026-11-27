@@ -228,15 +228,21 @@ def test_broken_response_stops_ai_but_keeps_the_scan(server, openai, monkeypatch
     assert result.findings and result.ai["error"]["kind"] == "error" and result.ai["fixes"]["failed"] == 0
 
 
-def test_stream_must_complete_and_be_a_json_object():
+def test_stream_must_complete_and_be_a_json_object(monkeypatch):
     done = {"type": "response.completed"}
     delta = lambda text: {"type": "response.output_text.delta", "delta": text}
     lines = lambda events: Response(200, events).getvalue().splitlines(keepends=True)
     assert chatgpt.collect(lines([delta("a"), delta("b"), done])) == "ab"
-    with pytest.raises(LLMError):
+    # 원인마다 문구가 달라야 사용자가 다시 시도할지(시간 초과·끊김) 판단할 수 있다
+    with pytest.raises(LLMError, match="연결이 끊겼어요"):
         chatgpt.collect(lines([delta("a")]))                       # 완료 전에 끊김
-    with pytest.raises(LLMError):
+    with pytest.raises(LLMError, match="생성이 실패"):
         chatgpt.collect(lines([delta("a"), {"type": "response.failed"}]))
+    with pytest.raises(LLMError, match="멈췄어요"):
+        chatgpt.collect(lines([delta("a"), {"type": "response.incomplete"}]))
+    monkeypatch.setattr(chatgpt, "DEADLINE", -1)
+    with pytest.raises(LLMError, match="분 안에 끝나지 않았어요"):
+        chatgpt.collect(lines([delta("a"), done]))
     assert chatgpt.parse('```json\n{"a": 1}\n```') == {"a": 1}
     with pytest.raises(LLMError):
         chatgpt.parse("[1]")

@@ -5,8 +5,11 @@ ChatGPT 보완 탐지(심층)는 compare 앞(새 발견도 직전 결과와 비�
 (ARCHITECTURE §2의 5·8번). 체인(6번)은 B8-4.
 llm은 탐지기를 모르므로 수정안 재검사 함수(_rescanner)를 여기서 넘긴다.
 """
+import dataclasses
+
 from wescope.analyzers.registry import analyzers
-from wescope.collector.context import collect
+from wescope.collector.context import SecretRegistry, collect
+from wescope.collector.inventory import build
 from wescope.collector.snapshot import Target
 from wescope.engine.aggregate import aggregate
 from wescope.engine.compare import compare
@@ -74,7 +77,7 @@ def run_scan(target: Target, *, previous: ScanResult | None = None, ignored=froz
         summary = None
         if run is not None:
             progress("ai")
-            summary = run.check_and_fix(findings, ctx, _rescanner(statuses, ctx.source["git"]), progress=progress,
+            summary = run.check_and_fix(findings, ctx, _rescanner(ctx, statuses), progress=progress,
                                         skip=lambda f: f.fingerprint in ignored or f.rule_id in disabled)
         result = aggregate(findings, statuses, ctx, ignored=ignored, disabled=disabled, trigger=trigger,
                            repo=target.repo_id, baseline_scan=previous.scan_id if previous else None, scan_id=scan_id)
@@ -103,7 +106,7 @@ def fix_group(repo_id: str, scan_id: str, rule_id: str, *, retry=False, progress
     progress("ai", task="fix", done=0, total=1)
     with collect(Target(repo["kind"], repo["location"], repo["branch"], tuple(repo["excludes"]))) as ctx:
         run_all(ctx, [a for a in analyzers() if a.id == "secrets"])   # 보내기 전에 가릴 비밀값을 다시 찾는다
-        rescan = _rescanner(result.analyzers, ctx.source["git"])
+        rescan = _rescanner(ctx, result.analyzers)
         fix = fixer.make_fix(Session(client), ctx, group, result.findings, rescan, rejected=rejected)
     for f in same:
         f.fix = fix if f is group[0] else None
@@ -113,16 +116,20 @@ def fix_group(repo_id: str, scan_id: str, rule_id: str, *, retry=False, progress
     return result
 
 
-def _rescanner(statuses, git: bool):
-    """수정안을 적용한 사본을 같은 탐지기로 다시 검사하는 함수 (llm.verify가 부른다).
+def _rescanner(ctx, statuses):
+    """수정안을 적용한 사본(원래 스냅샷 ctx.root의 복사본)을 같은 탐지기로 다시 검사하는 함수 (llm.verify가 부른다).
     원래 검사에서 끝까지 돈(ok) 탐지기가 이번에 실패·일부만 돌면 그 id를 함께 돌려준다.
-    git: 원래 대상이 Git 저장소였는지. 사본에는 .git이 없어 넘기지 않으면 .gitignore 검사가 아예 돌지 않는다.
+    새 스냅샷을 만들지 않고 바뀐 파일만 사본에서 새로 읽는다. 나머지 내용·Git 상태는 원래 검사의 것을 쓴다:
+    Windows 백신이 갓 복사한 파일을 처음 열 때마다 검사해, 큰 저장소는 재검사 한 번에 수십 초가 들었다.
     shortcut: 하위 폴더 연결이면 루트 쪽 .gitignore를 사본에서 볼 수 없어 이미 막은 패턴도 빠졌다고 보고 partial이 될 수 있다."""
     finished = {s.id for s in statuses if s.status == "ok"}
 
-    def rescan(folder):
-        with collect(Target("folder", str(folder))) as ctx:
-            ctx.source["git"] = git
-            hits, after = run_all(ctx, analyzers())
-            return normalize(hits, ctx), sorted(s.id for s in after if s.id in finished and s.status != "ok")
+    def rescan(folder, touched):
+        copy = dataclasses.replace(
+            ctx, root=folder, files=sorted(set(ctx.files) | touched), all_files=sorted(set(ctx.all_files) | touched),
+            skipped=dict(ctx.skipped), git_ignores=None, secrets=SecretRegistry(), partial_files=set(),
+            changed=frozenset(touched), _texts={p: t for p, t in ctx._texts.items() if p not in touched}, _asts={})
+        copy.profile = build(copy)
+        hits, after = run_all(copy, analyzers())
+        return normalize(hits, copy), sorted(s.id for s in after if s.id in finished and s.status != "ok")
     return rescan

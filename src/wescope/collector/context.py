@@ -46,6 +46,7 @@ class ScanContext:
     secrets: SecretRegistry = field(default_factory=SecretRegistry)
     profile: AppProfile = field(default_factory=AppProfile)
     partial_files: set[str] = field(default_factory=set)
+    changed: frozenset[str] | None = None    # 수정안 재검사: 바뀐 파일만. 파일 하나씩 보는 탐지기(Semgrep)는 이것만 다시 본다
     _texts: dict = field(default_factory=dict, repr=False)
     _asts: dict = field(default_factory=dict, repr=False)
 

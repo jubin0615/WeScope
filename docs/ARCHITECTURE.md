@@ -286,7 +286,7 @@ WS 영역은 규칙 메타데이터, OWASP는 CWE에서 계산한다. 규칙에 
 | `ai_coverage` | ChatGPT 검토 범위 (AI.md §9). 보완 탐지(심층)를 하지 않은 검사는 `[]`. B8-3b: CoverageRow 4개 `code` `AI-AUTHZ`(업무 로직 인가)·`AI-PAYMENT`(결제·상태 전이)·`AI-FLOW`(파일 간 흐름)·`AI-LANG`(정적 분석 미지원 언어), `state` `reviewed`(대상 파일을 모두 검토) / `partial`(예산·한도로 일부) / `not_reviewed`(하나도 못 함) / `not_applicable`(그런 코드 없음), `findings`는 검토한 파일(함께 보낸 파일 포함)의 새 AI 발견 수. '검토함'은 '안전함'이 아니다 |
 | `findings` | Finding[] |
 | `summary` | 심각도별 개수, new/fixed 개수, 위험 점수 |
-| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model" (요청 전에 멈췄으면 null), "requests", "cache_hits", "review": {"targets", "found", "merged", "discarded", "remaining"}|null (B8-3b, 심층일 때만), "triage": {"confirmed", "protected", "unclear", "remaining"} (B8-3a), "fixes": {"verified", "partial", "failed"}, "budget_exceeded" (확인·수정안 중 하나라도 예산 초과), "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message"} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
+| `ai` | ChatGPT를 쓰지 않은 검사는 `null`. B8-1: `{"level", "model" (요청 전에 멈췄으면 null), "requests", "cache_hits", "review": {"targets", "found", "merged", "discarded", "remaining"}|null (B8-3b, 심층일 때만), "triage": {"confirmed", "protected", "unclear", "remaining"} (B8-3a), "fixes": {"verified", "partial", "failed"}, "budget_exceeded" (확인·수정안 중 하나라도 예산 초과), "remaining_groups", "error": {"kind": "login"\|"plan"\|"limit"\|"error", "message" (마지막 오류), "skipped" (실패해 건너뛴 항목 수)} \| null}`. AI 발견·폐기 수는 B8-3에서 추가 |
 
 ---
 

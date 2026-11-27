@@ -10,19 +10,23 @@ from wescope.llm.guards import Redactor
 
 
 def _each(items, task, work, summary, progress) -> bool:
-    """items마다 work. 멈춰야 하면 False. 하나가 실패해도 나머지는 계속한다."""
+    """items마다 work. 멈춰야 하면 False. 하나가 실패해도 나머지는 계속한다.
+    error.skipped: 이번 검사에서 실패해 건너뛴 항목 수 (화면이 'ChatGPT 전체 실패'로 읽히지 않게). 메시지는 마지막 것."""
     for done, item in enumerate(items):
         progress("ai", task=task, done=done, total=len(items))
         try:
             work(item)
+            continue
         except LLMError as error:
-            summary["error"] = {"kind": error.kind, "message": str(error)}
-            if error.kind != "error":
-                return False
+            kind, message = error.kind, str(error)
         except Exception as error:
             # 응답 형식을 놓친 곳이 있어도 이 항목만 실패로 남긴다. 검사가 통째로 멈추면 정적 결과도 저장되지 않고,
             # 그 응답은 캐시에 있어 다시 스캔해도 똑같이 멈춘다. 오류 종류 이름은 남겨 버그를 찾을 수 있게 한다
-            summary["error"] = {"kind": "error", "message": f"ChatGPT 결과를 처리하지 못했어요 ({type(error).__name__})"}
+            kind, message = "error", f"ChatGPT 결과를 처리하지 못했어요 ({type(error).__name__})"
+        skipped = (summary["error"] or {}).get("skipped", 0) + 1
+        summary["error"] = {"kind": kind, "message": message, "skipped": skipped}
+        if kind != "error":
+            return False
     return True
 
 
