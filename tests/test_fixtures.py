@@ -28,7 +28,7 @@ def found(result):
 
 
 @needs_semgrep
-@pytest.mark.parametrize("name", ["vuln_flask", "vuln_express"])
+@pytest.mark.parametrize("name", ["vuln_flask", "vuln_express", "vuln_django"])
 def test_vulnerable_apps_match_expectations(name, tmp_path):
     root, _, result = scan(name, tmp_path)
     assert found(result) == expected_hits(root)
@@ -55,7 +55,7 @@ def test_clean_app_has_no_findings(tmp_path):
 
 
 @needs_semgrep
-@pytest.mark.parametrize("name", ["vuln_flask", "vuln_express", "secrets_zoo"])
+@pytest.mark.parametrize("name", ["vuln_flask", "vuln_express", "vuln_django", "secrets_zoo"])
 def test_no_secret_leaves_in_result(name, tmp_path):
     """불변식: 심은 비밀값(.env 안의 값 포함)이 결과 JSON 어디에도 원문으로 남지 않는다."""
     _, planted, result = scan(name, tmp_path)
@@ -64,9 +64,10 @@ def test_no_secret_leaves_in_result(name, tmp_path):
 
 
 @needs_semgrep
-def test_same_code_same_result(tmp_path):
+@pytest.mark.parametrize("name", ["vuln_flask", "vuln_django"])
+def test_same_code_same_result(name, tmp_path):
     """불변식: 같은 코드를 두 번 검사하면 발견·검사 범위·요약이 같다."""
-    root, _ = materialize("vuln_flask", tmp_path)
+    root, _ = materialize(name, tmp_path)
     first, second = (run_scan(Target("folder", str(root))) for _ in range(2))
     assert first.findings == second.findings
     assert first.coverage == second.coverage and first.summary == second.summary

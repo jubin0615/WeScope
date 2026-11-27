@@ -1,0 +1,4 @@
+<section class="bio">
+  {# expect: inject-xss-template #}
+  {% autoescape off %}{{ bio }}{% endautoescape %}
+</section>

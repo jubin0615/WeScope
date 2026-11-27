@@ -106,7 +106,8 @@ def _assignment(ctx, hit, name, node, module_flags):
 def _signing_key(ctx, hit, name, value, node):
     if re.sub(r"[_\-]", "", name.lower()) not in SIGNING_KEY_NAMES:
         return
-    if len(value) < 32 or value.lower() in WEAK_SIGNING_VALUES:
+    # django-insecure-: startproject가 만든 개발용 키. 길어도 저장소에 그대로 있으면 누구나 안다
+    if len(value) < 32 or value.lower() in WEAK_SIGNING_VALUES or value.startswith("django-insecure-"):
         if len(value) >= 8 and value.lower() not in WEAK_SIGNING_VALUES:
             ctx.secrets.register(value)   # 누구나 아는 기본값이 아니면 화면에 원문을 남기지 않는다
         hit("config-weak-secret", node)

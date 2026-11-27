@@ -70,8 +70,8 @@
 | `authz-next-handler` | Next.js `app/**/route.ts`의 `GET/POST…` export, Server Action(`"use server"`)에 `auth()`·`getServerSession`·`currentUser` 단서 없음 | HIGH | P | CWE-862 | A01 | M4 |
 | `authz-spring-policy` | Spring MVC 관리자 경로를 `SecurityFilterChain` 첫 일치 규칙·`@PreAuthorize`와 대조 (기존 구현 이식) | HIGH | P | CWE-862 | A01 | M4 |
 
-**지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Next.js App Router — M4 / Spring MVC — M4.
-**한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P.
+**지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Django(`urls.py`의 `path`·`re_path`·`include` → 함수 view·클래스 view 메서드, 가드 `@login_required`·`@permission_required`·`@user_passes_test`·`@staff_member_required`·`LoginRequiredMixin`·DRF `permission_classes`(클래스 이름으로 판정: `IsAuthenticated`는 로그인, `IsAdminUser`는 관리자, `AllowAny`는 가드 아님)·settings `MIDDLEWARE`에 들어 있는 `LoginRequiredMiddleware`, 한 view가 여러 URL에 걸리면 URL마다 판정, 메서드는 `@require_POST`·`@require_http_methods`·`@api_view`·본문의 `request.method`/`request.POST`로 추정) — B9 / Next.js App Router — M4 / Spring MVC — M4.
+**한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P. Django는 DRF router(ViewSet)와 메서드를 직접 정의하지 않은 제네릭 뷰(`DetailView` 등)를 아직 라우트로 보지 않는다.
 
 ---
 
@@ -106,20 +106,20 @@
 
 | rule_id | 찾는 것 | 언어 | 심각도 | 신뢰도 | CWE | OWASP | 단계 |
 |---|---|---|---|---|---|---|---|
-| `inject-sql` | 외부 입력·문자열 결합(f-string, `+`, `%`, `.format`, 템플릿 리터럴)이 `execute`·`query`·`raw`·`$queryRawUnsafe`에 도달 | Py, JS/TS | HIGH | L | CWE-89 | A05 | M1 |
+| `inject-sql` | 외부 입력·문자열 결합(f-string, `+`, `%`, `.format`, 템플릿 리터럴)이 `execute`·`query`·`raw`·`$queryRawUnsafe`, Django `.extra(where/select/order_by)`·`RawSQL`에 도달 | Py, JS/TS | HIGH | L | CWE-89 | A05 | M1 |
 | `inject-code` | 외부 입력이 `eval`·`exec`·`new Function`·`vm.runInNewContext`에 도달 | Py, JS/TS | HIGH | L | CWE-94 | A05 | M1 |
 | `inject-command` | 외부 입력이 `subprocess(..., shell=True)`·`os.system`·`os.popen`·`child_process.exec`에 도달 | Py, JS/TS | HIGH | L | CWE-78 | A05 | M1 |
-| `inject-xss` | `Markup(입력)`, `render_template_string(입력)`, `innerHTML =`, `document.write`, `dangerouslySetInnerHTML`, `res.send(입력 포함 HTML)` | Py, JS/TS | HIGH | L | CWE-79 | A05 | M1 |
+| `inject-xss` | `Markup(입력)`, `render_template_string(입력)`, Django `mark_safe`·`SafeString`·`Template(입력)`·`HttpResponse(입력)`(`text/plain`·JSON 형식 지정은 제외), `innerHTML =`, `document.write`, `dangerouslySetInnerHTML`, `res.send(입력 포함 HTML)` | Py, JS/TS | HIGH | L | CWE-79 | A05 | M1 |
 | `inject-xss-template` | `{{ x\|safe }}`, `{% autoescape false %}`, `v-html`, `{@html}`, `set:html` | 템플릿 | MEDIUM | P | CWE-79 | A05 | M1 |
 | `inject-path` | 입력값으로 `open`·`send_file`·`fs.readFile`·`res.sendFile` 경로 구성 | Py, JS/TS | HIGH | L | CWE-22 | A01 | M1 |
 | `inject-ssrf` | 입력 URL로 `requests`·`httpx`·`urllib`·`fetch`·`axios` 요청 | Py, JS/TS | HIGH | L | CWE-918 | A01 | M1 |
 | `inject-deserialize` | `pickle.loads`, `yaml.load`(안전 로더 미지정), `marshal.loads` | Py | HIGH | P | CWE-502 | A08 | M1 |
-| `inject-upload` | 업로드 파일명을 `secure_filename` 없이 저장, multer `originalname` 그대로 사용 | Py, JS/TS | MEDIUM | L | CWE-434 | A06 | M1 |
-| `inject-open-redirect` | `redirect(request.args[...])`, `res.redirect(req.query.x)`, `window.location = 입력` | Py, JS/TS | MEDIUM | L | CWE-601 | A01 | M1 |
+| `inject-upload` | 업로드 파일명을 `secure_filename` 없이 저장(Django `request.FILES[..].name`을 `storage.save`에), multer `originalname` 그대로 사용 | Py, JS/TS | MEDIUM | L | CWE-434 | A06 | M1 |
+| `inject-open-redirect` | `redirect(request.args[...])`, Django `HttpResponseRedirect(request.GET[...])`, `res.redirect(req.query.x)`, `window.location = 입력` | Py, JS/TS | MEDIUM | L | CWE-601 | A01 | M1 |
 | `inject-java-sql-flow` | `@RequestParam`·`getParameter` → JDBC SQL 본문 (파일 간 호출 경로, 기존 구현 이식) | Java | HIGH | L | CWE-89 | A05 | M4 |
 
-**외부 입력 출처(source)**: Flask `request.*`, FastAPI 경로·쿼리·바디 파라미터, Express `req.body/query/params/headers`, Next.js `searchParams`·`request.json()`.
-**안전 신호**: 파라미터 바인딩(`?`, `%s` + 인자 튜플, `$1`), ORM 메서드, `escape()`, `DOMPurify.sanitize`, `textContent`, `yaml.safe_load`, `secure_filename`, URL allowlist.
+**외부 입력 출처(source)**: Flask `request.*`, FastAPI 경로·쿼리·바디 파라미터, Django `request.GET/POST/body/COOKIES/FILES/META/headers`·DRF `request.data/query_params`·view 함수(첫 인자 `request`)의 URL 인자, Express `req.body/query/params/headers`, Next.js `searchParams`·`request.json()`.
+**안전 신호**: 파라미터 바인딩(`?`, `%s` + 인자 튜플, `$1`), ORM 메서드, `escape()`, `DOMPurify.sanitize`, `textContent`, `yaml.safe_load`, `secure_filename`, URL allowlist, Django `conditional_escape`·`format_html`·`reverse()`·`if url_has_allowed_host_and_scheme(url, ...):` 안의 값·`get_valid_filename`.
 
 ---
 
@@ -132,7 +132,7 @@
 | `config-cors-wildcard` | `CORS(app)` 기본값, `origins="*"`, `cors({ origin: '*' })`, `CORS_ALLOW_ALL_ORIGINS = True` | MEDIUM | L | CWE-942 | A02 | M1 |
 | `config-cors-credentials` | `*` 또는 요청 Origin 그대로 반사 **+** `supports_credentials=True` / `credentials: true` | HIGH | L | CWE-942 | A02 | M1 |
 | `config-cookie-flags` | 세션·인증 쿠키에 `Secure`·`HttpOnly`·`SameSite` 누락 (`SESSION_COOKIE_SECURE = False`, `res.cookie(..)` 옵션 누락) | MEDIUM | L | CWE-614 / 1004 / 1275 | A02 / A02 / A01 | M1 |
-| `config-weak-secret` | `SECRET_KEY`·`JWT_SECRET`·`SESSION_SECRET`가 32자 미만 고정값 또는 `secret`·`changeme`·`dev` 같은 기본값 | HIGH | L | CWE-321 | A04 | M1 |
+| `config-weak-secret` | `SECRET_KEY`·`JWT_SECRET`·`SESSION_SECRET`가 32자 미만 고정값 또는 `secret`·`changeme`·`dev` 같은 기본값, Django `startproject`의 `django-insecure-` 키 | HIGH | L | CWE-321 | A04 | M1 |
 | `config-weak-hash` | 비밀번호 문맥의 `hashlib.md5`·`sha1`, `crypto.createHash('md5')` | MEDIUM | P | CWE-328 | A04 | M1 |
 | `config-tls-verify-off` | `verify=False`, `rejectUnauthorized: false`, `NODE_TLS_REJECT_UNAUTHORIZED=0` | MEDIUM | L | CWE-295 | A07 | M1 |
 | `config-default-credential` | 로그인 비교·시드의 `admin`/`admin`, `admin`/`password`, `root`/`root` | HIGH | L | CWE-1392 | A07 | M1 |

@@ -1,6 +1,8 @@
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from conftest import git, make_git_repo, materialize
 from wescope.collector.context import collect
 from wescope.collector.snapshot import Target
@@ -15,9 +17,10 @@ def tree_hash(root: Path) -> str:
     return digest.hexdigest()
 
 
-def test_scan_never_changes_the_original(tmp_path):
+@pytest.mark.parametrize("name", ["secrets_zoo", "vuln_django"])
+def test_scan_never_changes_the_original(name, tmp_path):
     """불변식: 검사 대상 폴더(.git 포함)는 스캔 전후가 같다."""
-    root, _ = materialize("secrets_zoo", tmp_path)
+    root, _ = materialize(name, tmp_path)
     make_git_repo(root)
     before = tree_hash(root)
     run_scan(Target("folder", str(root)))

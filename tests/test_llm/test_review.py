@@ -45,6 +45,13 @@ def test_targets_are_the_risky_route_files(logic):
                                         "with": ["repo.py", "models.py", "services.py"]}]   # 쿼리가 있는 파일 먼저 함께 보낸다
 
 
+def test_django_views_are_route_files(tmp_path):
+    root = materialize("vuln_django", tmp_path)[0]
+    with collect(Target("folder", str(root))) as ctx:
+        paths = {t["path"] for t in review.targets(ctx)}
+    assert {"shop/views.py", "shop/api.py"} <= paths    # api.py는 클래스 view(def delete(self, request, pk))만 있다
+
+
 def test_quoted_findings_become_ai_findings(logic):
     def found(p):
         return [at(p, "app.py", 'request.json["unit_price"]', vuln_type="price-tampering", severity="CRITICAL"),

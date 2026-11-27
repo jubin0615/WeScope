@@ -133,7 +133,7 @@ wescope        # 이것 하나뿐. 대시보드 서버를 띄우고 브라우저
 | 오류 노출 | 스택트레이스·예외 메시지를 응답으로 반환 | MEDIUM |
 | fail-open | 인증 함수의 `except: return True` | HIGH |
 
-지원 프레임워크: Flask, FastAPI, Express (v1), Next.js App Router (v1.1), Spring MVC (확장).
+지원 프레임워크: Flask, FastAPI, Django, Express (v1), Next.js App Router (v1.1), Spring MVC (확장).
 
 ---
 

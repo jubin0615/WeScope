@@ -63,6 +63,7 @@ WeScope/
 │       │   │   ├── model.py      #   Route, 가드 단서, 함수 범위
 │       │   │   ├── flask.py      #   @app.route, Blueprint
 │       │   │   ├── fastapi.py    #   APIRouter, Depends
+│       │   │   ├── django.py     #   urls.py path·include → view 함수·클래스, 가드 데코레이터·Mixin
 │       │   │   ├── express.py    #   app.get/router.post, 미들웨어 인자
 │       │   │   └── nextjs.py     #   (M4) app/**/route.ts, Server Action
 │       │   │
@@ -217,6 +218,7 @@ WeScope/
 │       ├── clean_app/            # 같은 기능을 안전하게 구현한 앱 (오탐 0 기준)
 │       ├── vuln_flask/           # WS-01·02·05·06 취약점을 심은 Flask 앱
 │       ├── vuln_express/         # 같은 취약점의 Express 앱
+│       ├── vuln_django/          # 같은 취약점의 Django 앱 (urls.py·함수/클래스 view·DRF·settings)
 │       ├── vuln_next/            # (M3~) Next.js + Supabase + LLM 라우트
 │       ├── vuln_logic/           # (M3) 정적 분석으로 못 찾는 취약점: IDOR·대량 할당·금액 변조·파일 간 SQL 흐름 (AI 보완 탐지 측정용)
 │       ├── results/              # 샘플 결과 JSON (대시보드 트랙이 엔진 없이 화면 개발)
@@ -338,7 +340,7 @@ collector  analyzers  engine  llm   report / store
 |---|---|---|
 | `collector/gitstate.py`, `ignore.py`, `files.py` | `collector/snapshot.py` 하나 | 걷기·제외·Git 상태가 한 번의 순회에서 끝난다 |
 | `analyzers/secrets/files.py` … `_filters.py` (7개) | `secrets/__init__.py`(판정) + `secrets/patterns.py`(패턴·필터) | 규칙들이 같은 줄 순회를 공유한다 |
-| `analyzers/routes/flask.py`, `fastapi.py` | `routes/python.py` | 두 프레임워크 모두 데코레이터 AST라 코드가 같다 |
+| `analyzers/routes/flask.py`, `fastapi.py` | `routes/python.py` | 두 프레임워크 모두 데코레이터 AST라 코드가 같다. Django는 URL과 view가 다른 파일이라 `routes/django.py`가 저장소 전체를 본다 |
 | `rules/semgrep/config-cors.yml` | `rules/semgrep/config-js.yml` | JS 쪽 CORS·쿠키·약한 서명 키를 함께 담는다 |
 | `tests/fixtures/expected/` | 표본 파일 안의 `# expect: 규칙` 주석 | 기대값이 코드 바로 위에 있어 어긋날 수 없다. 파일 단위 발견만 테스트에 적는다 |
 | `tests/test_rules_semgrep.py`의 표본 | `tests/semgrep_samples/` + `# ruleid:` / `# ok:` 주석 | Semgrep 표준 주석 형식 |
