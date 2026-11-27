@@ -86,7 +86,8 @@ def server():
     app = create_app(TICKET, PORT)
     with TestClient(app, base_url=BASE) as tab:
         tab.get(f"/?ticket={TICKET}")
-        yield tab, TestClient(app, base_url=BASE)
+        # OpenAI로 보내는 303을 따라가면 그 주소가 Host 검사에 걸려 400이 된다: 응답 코드를 그대로 보려고 따라가지 않는다
+        yield tab, TestClient(app, base_url=BASE, follow_redirects=False)
 
 
 def query(url):
@@ -97,7 +98,7 @@ def log_in(server, openai):
     tab, redirect = server
     openai.authorize = tab.post("/api/auth/login").json()["url"]
     first = query(openai.authorize)
-    back = redirect.get("/auth/callback", params={"state": first["state"], "client_id": "client-1"}, follow_redirects=False)
+    back = redirect.get("/auth/callback", params={"state": first["state"], "client_id": "client-1"})
     assert back.status_code == 303                       # 처음이면 등록 → 이어서 로그인 승인
     openai.authorize = back.headers["location"]
     second = query(openai.authorize)
@@ -130,16 +131,15 @@ def test_register_then_login_then_ask(server, openai):
     assert tab.get("/api/auth").json()["state"] == "login" and connected() is None
 
 
-@pytest.mark.parametrize("bad", [{"state": "guess"}, {"error": "access_denied"}])
-def test_callback_rejects_wrong_or_refused_answers(server, openai, bad):
+def test_refused_login_is_rejected_and_its_state_used_up(server, openai):
+    """승인 거절. state가 틀린 콜백은 test_stray_callback_does_not_cancel_the_real_login에서 본다."""
     tab, redirect = server
     url = tab.post("/api/auth/login").json()["url"]
-    params = {"state": query(url)["state"], "client_id": "client-1", **bad}
-    resp = redirect.get("/auth/callback", params=params)
+    resp = redirect.get("/auth/callback", params={"state": query(url)["state"], "error": "access_denied"})
     assert resp.status_code == 400
-    assert tab.get("/api/auth").json()["state"] == "login" and "<" not in resp.text.split("<p>")[1].split("</p>")[0]
-    # 한 번 쓴 state로는 다시 들어올 수 없다
-    assert redirect.get("/auth/callback", params={"state": query(url)["state"], "client_id": "c"}).status_code == 400
+    assert tab.get("/api/auth").json() == {"state": "login", "message": "ChatGPT에서 승인하지 않았어요"}
+    # 맞는 state로 한 번 처리했으면 같은 state로는 다시 들어올 수 없다
+    assert redirect.get("/auth/callback", params={"state": query(url)["state"], "client_id": "client-1"}).status_code == 400
 
 
 def test_stray_callback_does_not_cancel_the_real_login(server, openai):
@@ -147,8 +147,7 @@ def test_stray_callback_does_not_cancel_the_real_login(server, openai):
     tab, redirect = server
     url = tab.post("/api/auth/login").json()["url"]
     assert redirect.get("/auth/callback", params={"state": "stale-or-forged"}).status_code == 400
-    real = redirect.get("/auth/callback", params={"state": query(url)["state"], "client_id": "client-1"},
-                        follow_redirects=False)
+    real = redirect.get("/auth/callback", params={"state": query(url)["state"], "client_id": "client-1"})
     assert real.status_code == 303
     assert tab.get("/api/auth").json()["message"] == "ChatGPT에 연결하지 않았어요"   # 엉뚱한 요청의 오류는 화면에 남기지 않는다
 
