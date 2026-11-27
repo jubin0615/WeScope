@@ -21,4 +21,8 @@ urlpatterns = [
     path("comments/", views.add_comment),
     path("manage/users/<int:pk>/", views.UserDeleteView.as_view()),
     path("api/orders/<int:pk>/", api.OrderAPI.as_view()),
+    path("manage/staff/<int:pk>/", api.StaffUserAPI.as_view()),
+    path("api/orders/<int:pk>/note/", api.order_note),
+    path("staff/", views.staff_list),            # 같은 view를 관리자 경로에도 건다
+    path("manage/staff/", views.staff_list),
 ]

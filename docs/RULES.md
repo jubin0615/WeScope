@@ -70,7 +70,7 @@
 | `authz-next-handler` | Next.js `app/**/route.ts`의 `GET/POST…` export, Server Action(`"use server"`)에 `auth()`·`getServerSession`·`currentUser` 단서 없음 | HIGH | P | CWE-862 | A01 | M4 |
 | `authz-spring-policy` | Spring MVC 관리자 경로를 `SecurityFilterChain` 첫 일치 규칙·`@PreAuthorize`와 대조 (기존 구현 이식) | HIGH | P | CWE-862 | A01 | M4 |
 
-**지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Django(`urls.py`의 `path`·`re_path`·`include` → 함수 view·클래스 view 메서드, 가드 `@login_required`·`@permission_required`·`@user_passes_test`·`@staff_member_required`·`LoginRequiredMixin`·DRF `permission_classes`(`AllowAny`는 가드 아님)·`LoginRequiredMiddleware`, 메서드는 `@require_POST`·`@require_http_methods`·`@api_view`·본문의 `request.method`/`request.POST`로 추정) — B9 / Next.js App Router — M4 / Spring MVC — M4.
+**지원 라우트 인식**: Flask(`@app.route`, Blueprint), FastAPI(`@app.get`, `APIRouter`, `Depends`), Express(`app.get`, `router.post`, 미들웨어 인자) — M1 / Django(`urls.py`의 `path`·`re_path`·`include` → 함수 view·클래스 view 메서드, 가드 `@login_required`·`@permission_required`·`@user_passes_test`·`@staff_member_required`·`LoginRequiredMixin`·DRF `permission_classes`(클래스 이름으로 판정: `IsAuthenticated`는 로그인, `IsAdminUser`는 관리자, `AllowAny`는 가드 아님)·settings `MIDDLEWARE`에 들어 있는 `LoginRequiredMiddleware`, 한 view가 여러 URL에 걸리면 URL마다 판정, 메서드는 `@require_POST`·`@require_http_methods`·`@api_view`·본문의 `request.method`/`request.POST`로 추정) — B9 / Next.js App Router — M4 / Spring MVC — M4.
 **한계**: 상위 미들웨어·리버스 프록시·게이트웨이의 인증은 보지 못한다. 그래서 신뢰도는 항상 P. Django는 DRF router(ViewSet)와 메서드를 직접 정의하지 않은 제네릭 뷰(`DetailView` 등)를 아직 라우트로 보지 않는다.
 
 ---

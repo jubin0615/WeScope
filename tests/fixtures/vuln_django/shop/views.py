@@ -115,6 +115,12 @@ def add_comment(request):
     return JsonResponse({"ok": True}, status=201)
 
 
+# expect: authz-admin-route
+@login_required
+def staff_list(request):
+    return JsonResponse({"staff": list(User.objects.values_list("username", flat=True))})
+
+
 class UserDeleteView(LoginRequiredMixin, View):
     # expect: authz-admin-route
     def post(self, request, pk):

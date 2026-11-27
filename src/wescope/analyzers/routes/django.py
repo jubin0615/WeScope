@@ -10,9 +10,6 @@ from wescope.analyzers.routes.model import Route
 
 _HTTP = ("get", "post", "put", "patch", "delete")
 _ONLY = {"require_POST": ["POST"], "require_GET": ["GET"], "require_safe": ["GET"]}
-# AllowAny는 '누구나 허용'이라 가드가 아니다 (ADMIN_HINT의 permission 단서에 걸리지 않게 지운다)
-_ALLOW_ANY = re.compile(r"permission_classes\s*=\s*[\[(]\s*AllowAny\s*,?\s*[\])]")
-_GLOBAL_LOGIN = "LoginRequiredMiddleware"   # Django 5.1+ 전역 로그인 강제
 
 
 def _name(node) -> str:
@@ -48,23 +45,23 @@ def routes(files: dict[str, tuple[str, ast.Module]]) -> list[Route]:
                     includes[target] = (file, call.args[0].value)
             else:
                 patterns.append((file, call.args[0].value, _name(view)))
-    global_guard = [_GLOBAL_LOGIN] if any(_GLOBAL_LOGIN in text for text, _ in files.values()) else []
+    global_guard = ["LoginRequiredMiddleware"] if _login_middleware(files) else []
 
-    found, seen = [], set()
+    # 같은 view가 여러 URL에 걸리면 URL마다 판정한다 (관리자 경로인지는 URL에 달렸다). 겹친 발견은 부르는 쪽이 합친다
+    found = []
     for urls_file, route, name in patterns:
         target = _pick(defs.get(name, []), urls_file)
-        if target is None or (target[0], target[1].lineno) in seen:   # 같은 view를 여러 URL에 걸어도 발견은 한 번
+        if target is None:
             continue
         file, node = target
-        seen.add((file, node.lineno))
         text = files[file][0]
         url = "/" + "".join(_clean(p) for p in _prefix(includes, urls_file) + [route])
         if isinstance(node, ast.ClassDef):
-            outer = [ast.unparse(b) for b in node.bases] + [ast.unparse(d) for d in node.decorator_list] + [
-                ast.unparse(s) for s in node.body if isinstance(s, ast.Assign)]
+            outer = [ast.unparse(b) for b in node.bases] + [_guard(d) for d in node.decorator_list] + [
+                _guard(s) for s in node.body if isinstance(s, ast.Assign)]
             for meth in node.body:
                 if isinstance(meth, ast.FunctionDef) and meth.name == "dispatch":
-                    outer += [ast.unparse(d) for d in meth.decorator_list]
+                    outer += [_guard(d) for d in meth.decorator_list]
             for meth in node.body:
                 if isinstance(meth, (ast.FunctionDef, ast.AsyncFunctionDef)) and meth.name in _HTTP:
                     found.append(_route(file, text, meth, [meth.name.upper()], url, f"{node.name}.{meth.name}",
@@ -77,9 +74,33 @@ def routes(files: dict[str, tuple[str, ast.Module]]) -> list[Route]:
 
 def _route(file, text, node, methods, url, function, outer) -> Route:
     start = node.decorator_list[0].lineno if node.decorator_list else node.lineno
-    guards = "\n".join(outer + [ast.unparse(d) for d in node.decorator_list])
-    return Route(methods, url, file, start, (start, node.end_lineno), function, _ALLOW_ANY.sub("", guards),
+    guards = "\n".join(outer + [_guard(d) for d in node.decorator_list])
+    return Route(methods, url, file, start, (start, node.end_lineno), function, guards,
                  ast.get_source_segment(text, node) or "", text.splitlines()[start - 1].strip())
+
+
+def _guard(node) -> str:
+    """가드 단서 원문. DRF permission_classes는 클래스 이름만 남긴다: 'permission'이라는 글자가 관리자 확인으로 읽히지 않게
+    (IsAuthenticated → 로그인 단서, IsAdminUser → 관리자 단서, AllowAny → 단서 없음)."""
+    if isinstance(node, ast.Assign) and any(_name(t) == "permission_classes" for t in node.targets):
+        source = ast.unparse(node.value)
+    elif isinstance(node, ast.Call) and _name(node.func) == "permission_classes":
+        source = " ".join(ast.unparse(a) for a in node.args)
+    else:
+        return ast.unparse(node)
+    names = [word.split(".")[-1] for word in re.findall(r"[\w.]+", source)]   # permissions.IsAuthenticated → IsAuthenticated
+    return " ".join(n for n in names if n != "AllowAny")
+
+
+def _login_middleware(files) -> bool:
+    """settings의 MIDDLEWARE 목록에 LoginRequiredMiddleware(Django 5.1+ 전역 로그인)가 실제로 있을 때만. import·주석은 아니다."""
+    for _, tree in files.values():
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Assign, ast.AugAssign)) and any(
+                    _name(t) == "MIDDLEWARE" for t in (node.targets if isinstance(node, ast.Assign) else [node.target])):
+                if any((_str(n) or "").endswith(".LoginRequiredMiddleware") for n in ast.walk(node.value)):
+                    return True
+    return False
 
 
 def _methods(node, body: str) -> list[str]:

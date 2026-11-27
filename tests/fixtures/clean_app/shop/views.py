@@ -5,6 +5,7 @@ import subprocess
 import uuid
 
 import requests
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.auth.models import User
@@ -97,6 +98,11 @@ def order_detail(request, pk):
 def add_comment(request):
     Comment.objects.create(body=request.POST["body"], author=request.user)
     return JsonResponse({"ok": True}, status=201)
+
+
+@staff_member_required
+def staff_list(request):
+    return JsonResponse({"staff": list(User.objects.values_list("username", flat=True))})
 
 
 class UserDeleteView(PermissionRequiredMixin, View):

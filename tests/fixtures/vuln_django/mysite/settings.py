@@ -15,5 +15,10 @@ SESSION_COOKIE_SECURE = False
 # expect: secret-hardcoded
 STRIPE_API_KEY = "{{FAKE:stripe}}"
 
-INSTALLED_APPS = ["django.contrib.admin", "django.contrib.auth", "rest_framework", "shop"]
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # "django.contrib.auth.middleware.LoginRequiredMiddleware",   주석 처리돼 있어 전역 로그인은 꺼져 있다
+]
+INSTALLED_APPS =["django.contrib.admin", "django.contrib.auth", "rest_framework", "shop"]
 ROOT_URLCONF = "mysite.urls"

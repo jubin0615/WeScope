@@ -54,8 +54,12 @@ class RoutesAnalyzer(Analyzer):
                 continue
             for route in found:
                 hits += judge(route)
+        seen = set()   # Django는 한 view를 여러 URL에 걸 수 있어 URL마다 판정하고 같은 위치·규칙 발견은 하나로
         for route in django.routes(python_files) if "django" in ctx.profile.frameworks else []:
-            hits += judge(route)
+            for h in judge(route):
+                if (h.rule_id, h.file, h.line) not in seen:
+                    seen.add((h.rule_id, h.file, h.line))
+                    hits.append(h)
         if failed:
             return AnalyzerResult(hits, "partial", f"Python 파일 {failed}개를 해석하지 못함")
         return AnalyzerResult(hits)
