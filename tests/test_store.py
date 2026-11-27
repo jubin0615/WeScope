@@ -154,8 +154,9 @@ def test_rejects_bad_inputs(tmp_path):
 def test_scan_lock_blocks_other_processes():
     """서버 작업 큐와 서버 없는 hook이 동시에 쓰지 않는다."""
     probe = "from wescope.store.lock import scan_lock\nwith scan_lock(timeout=0.3): pass"
+    # 자식이 쓰는 한국어 오류 문장의 인코딩이 이 PC 기본 인코딩(cp949 등)과 달라도 읽히게 errors="replace"
     with scan_lock():
-        busy = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
-    free = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
+        busy = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, errors="replace")
+    free = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, errors="replace")
     assert busy.returncode != 0 and "TimeoutError" in busy.stderr
     assert free.returncode == 0
