@@ -2,8 +2,6 @@
 
 수정안은 같은 rule_id 묶음의 대표 발견(묶음의 첫 발견)의 `fix`에 붙는다. 사용자 코드는 고치지 않는다.
 """
-from wescope.llm import cache
-from wescope.llm.client import LLMError
 from wescope.llm.context import fix_payload
 from wescope.llm.guards import Redactor, map_strings
 from wescope.llm.verify import verify
@@ -48,29 +46,6 @@ def groups(findings, skip=lambda f: False) -> list[list]:
     return list(by_rule.values())
 
 
-class Session:
-    """요청 수·캐시 적중 수를 센다."""
-
-    def __init__(self, client):
-        self.client = client
-        self.model = None
-        self.stats = {"requests": 0, "cache_hits": 0}
-
-    def ask(self, payload: dict) -> tuple[dict, str]:
-        self.model = self.client.model      # 실제 클라이언트는 첫 요청 때 모델 목록을 받는다 (실패하면 LLMError)
-        key = cache.key(self.model, PROMPT_VERSION, INSTRUCTIONS, payload)
-        answer = cache.get(key)
-        if answer is not None:
-            self.stats["cache_hits"] += 1
-            return answer, key
-        self.stats["requests"] += 1
-        answer = self.client.ask(INSTRUCTIONS, payload)
-        if not isinstance(answer, dict):
-            raise LLMError("ChatGPT 응답이 JSON 객체가 아니에요")
-        cache.put(key, answer)
-        return answer, key
-
-
 def _shape_error(answer: dict) -> str | None:
     wrong = [name for name, kind in _FIELDS.items() if not isinstance(answer.get(name), kind)]
     if wrong:
@@ -80,13 +55,13 @@ def _shape_error(answer: dict) -> str | None:
     return None
 
 
-def make_fix(session: Session, ctx, group, before, rescan, *, rejected=None) -> dict:
+def make_fix(session, ctx, group, before, rescan, *, rejected=None) -> dict:
     """한 묶음의 수정안. 검증되지 않으면 실패 이유를 붙여 한 번 더 요청하고, 둘 중 나은 것을 쓴다."""
     redactor = Redactor(ctx.secrets.values())
     previous, best = None, None
     for attempt in (1, 2):
         payload, suspect = fix_payload(ctx, group, redactor, previous=previous, rejected=rejected)
-        answer, key = session.ask(payload)
+        answer, key = session.ask(INSTRUCTIONS, PROMPT_VERSION, payload)
         problem = _shape_error(answer)
         checks = ({"status": "failed", "apply": False, "syntax": None, "rescan": None, "reasons": [problem]}
                   if problem else verify(ctx.root, answer["diff"], redactor, group, before, rescan))
@@ -101,27 +76,3 @@ def make_fix(session: Session, ctx, group, before, rescan, *, rejected=None) -> 
     best["attempts"] = attempt
     # 모델은 자리표시만 봤지만, 저장·화면으로 나가기 전에 한 번 더 가린다
     return map_strings(best, ctx.secrets.mask)
-
-
-def auto_fixes(findings, ctx, client, rescan, *, level: str, skip=lambda f: False, progress=lambda *a, **k: None,
-               limit: int = AUTO_GROUPS) -> dict:
-    """검사 중 자동 생성: CRITICAL·HIGH 묶음 상위 limit개. → 결과 JSON의 `ai` 요약."""
-    session = Session(client)
-    candidates = [g for g in groups(findings, skip) if g[0].severity in AUTO_SEVERITIES]
-    targets = candidates[:limit]
-    summary = {"level": level, "model": None, "requests": 0, "cache_hits": 0,
-               "fixes": {"verified": 0, "partial": 0, "failed": 0},
-               "budget_exceeded": len(candidates) > limit, "remaining_groups": len(candidates) - len(targets),
-               "error": None}
-    for done, group in enumerate(targets):
-        progress("ai", done=done, total=len(targets))
-        try:
-            group[0].fix = make_fix(session, ctx, group, findings, rescan)
-        except LLMError as error:
-            summary["error"] = {"kind": error.kind, "message": str(error)}
-            if error.kind != "error":
-                break          # 로그인·자격·한도 문제는 다음 요청도 실패한다: 바로 멈추고 지금까지 결과는 둔다
-            continue
-        summary["fixes"][group[0].fix["verification"]] += 1
-    summary.update(session.stats, model=session.model)
-    return summary

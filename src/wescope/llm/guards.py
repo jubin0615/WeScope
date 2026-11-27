@@ -99,3 +99,16 @@ def safe_path(path: str) -> bool:
     parts = path.replace("\\", "/").split("/")
     return bool(path) and not path.startswith(("/", "\\")) and ":" not in parts[0] and ".." not in parts \
         and ".git" not in parts
+
+
+def quote_matches(text: str | None, start, end, quoted) -> bool:
+    """ChatGPT가 인용한 코드가 그 파일의 start~end 줄에 실제로 있는가 (환각 방지, AI.md §4·§5-3).
+    공백은 무시하고, 인용이 그 범위의 일부여도 된다. 범위는 60줄까지."""
+    if text is None or not isinstance(quoted, str) or not all(isinstance(n, int) for n in (start, end)):
+        return False
+    lines = text.splitlines()
+    if not 1 <= start <= end <= len(lines) or end - start > 60:
+        return False
+    squash = lambda s: re.sub(r"\s+", "", s)
+    needle = squash(re.sub(r"(?m)^\s*\d+\|\s?", "", quoted))   # 보낸 줄 번호 접두어('  12| ')를 같이 인용해도 된다
+    return len(needle) >= 8 and needle in squash("\n".join(lines[start - 1:end]))

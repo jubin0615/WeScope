@@ -66,7 +66,8 @@ def test_verified_fix_is_attached_and_original_untouched(app):
     ai = result.ai
     assert ai["fixes"]["verified"] == 1 and ai["fixes"]["failed"] == 4
     assert ai["budget_exceeded"] and ai["remaining_groups"] > 0          # HIGH 묶음이 5개보다 많다
-    assert ai["requests"] == len(fake.requests) == 1 + 4 * 2             # 실패한 묶음은 한 번씩 다시 요청
+    assert ai["requests"] == len(fake.requests)
+    assert len([r for r in fake.requests if r["task"] == "fix"]) == 1 + 4 * 2   # 실패한 묶음은 한 번씩 다시 요청
     assert tree_hash(root) == before                                     # 사용자 코드는 고치지 않는다
 
 
@@ -103,7 +104,7 @@ def test_failed_attempt_is_retried_with_reasons(app):
     fake = FakeChatGPT(respond)
     fix = fixes(run_scan(Target("folder", str(root)), ai=fake))["config-weak-secret"]
     assert fix["verification"] == "verified" and fix["attempts"] == 2
-    retry = [r for r in fake.requests if r["rule"]["rule_id"] == "config-weak-secret"][1]
+    retry = [r for r in fake.requests if r["task"] == "fix" and r["rule"]["rule_id"] == "config-weak-secret"][1]
     assert any("문법 오류" in reason for reason in retry["previous_attempt"]["failures"])
 
 
@@ -214,7 +215,8 @@ def test_same_code_is_answered_from_cache(app):
 def test_usage_limit_stops_ai_but_keeps_static_results(app):
     root, _ = app
     static = run_scan(Target("folder", str(root)))
-    fake = FakeChatGPT(lambda p: LLMError("ChatGPT 사용량 한도에 도달했어요", "limit"))
+    limit = lambda p: LLMError("ChatGPT 사용량 한도에 도달했어요", "limit")
+    fake = FakeChatGPT(limit, triage=limit)
     result = run_scan(Target("folder", str(root)), ai=fake)
     assert len(fake.requests) == 1 and result.ai["error"]["kind"] == "limit"
     assert not fixes(result)
