@@ -42,7 +42,11 @@ def logout():
 @router.get(CALLBACK)
 def callback(request: Request):
     state = request.app.state
-    pending, state.auth_pending = state.auth_pending, None        # 한 번만 쓴다
+    pending = state.auth_pending
+    if not pending or request.query_params.getlist("state") != [pending["state"]]:
+        # 오래된 콜백이나 위조 요청 (이 경로는 쿠키 검사가 없다): 진행 중인 로그인과 화면의 오류 문구는 그대로 둔다
+        return _page("ChatGPT에 연결하지 못했어요", "로그인 요청이 만료됐거나 올바르지 않아요. 대시보드에서 다시 연결하세요", 400)
+    state.auth_pending = None                                     # state가 맞으면 한 번만 쓴다
     query = {name: request.query_params.getlist(name) for name in request.query_params}
     try:
         following = auth.finish(pending, query)

@@ -142,6 +142,34 @@ def test_callback_rejects_wrong_or_refused_answers(server, openai, bad):
     assert redirect.get("/auth/callback", params={"state": query(url)["state"], "client_id": "c"}).status_code == 400
 
 
+def test_stray_callback_does_not_cancel_the_real_login(server, openai):
+    """쿠키 검사가 없는 경로라 state가 틀린 요청(오래된 콜백·위조)도 올 수 있다. 진행 중인 로그인은 살아 있어야 한다."""
+    tab, redirect = server
+    url = tab.post("/api/auth/login").json()["url"]
+    assert redirect.get("/auth/callback", params={"state": "stale-or-forged"}).status_code == 400
+    real = redirect.get("/auth/callback", params={"state": query(url)["state"], "client_id": "client-1"},
+                        follow_redirects=False)
+    assert real.status_code == 303
+    assert tab.get("/api/auth").json()["message"] == "ChatGPT에 연결하지 않았어요"   # 엉뚱한 요청의 오류는 화면에 남기지 않는다
+
+
+def test_rejected_token_is_refreshed_once_then_needs_login(server, openai):
+    """저장된 만료 시각 전에 ChatGPT가 토큰을 거절(401)하면: 새 토큰으로 한 번 다시, 그래도 거절이면 다시 연결하게."""
+    tab, _ = server
+    log_in(server, openai)
+    answers = iter([Response(401, {})])
+    ok = openai.responses
+    openai.responses = lambda body: next(answers, None) or ok(body)
+    assert connected().ask("지시", {}) == {"answer": 1}                 # 갱신한 토큰으로 성공
+    assert auth.load()["session"]["access_token"] == "access-2"
+
+    openai.responses = lambda body: Response(401, {})
+    with pytest.raises(LLMError) as error:
+        connected().ask("지시", {})
+    assert error.value.kind == "login"
+    assert tab.get("/api/auth").json()["state"] == "login"              # 상단 바가 [ChatGPT 연결] 버튼으로
+
+
 def test_wrong_nonce_is_rejected(server, openai, monkeypatch):
     tab, redirect = server
     real = openai.token

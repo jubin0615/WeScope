@@ -238,6 +238,15 @@ def access_token() -> str:
         return record["session"]["access_token"]
 
 
+def expire() -> None:
+    """ChatGPT가 access token을 거절(401)했을 때: 다음 access_token()이 refresh token으로 새로 받게 한다."""
+    with held("auth.lock", 30):
+        record = load()
+        if record.get("session"):
+            record["session"]["expires_at"] = 0
+            _save(record)
+
+
 def logout() -> None:
     """이 PC에 저장한 토큰만 지운다 (등록·ChatGPT 설정의 앱 연결은 그대로)."""
     with held("auth.lock", 30):

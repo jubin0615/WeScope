@@ -27,15 +27,24 @@ def _guarded():
 
 
 def _request(method: str, path: str, *, data: bytes | None = None, accept="application/json"):
-    headers = {"Authorization": "Bearer " + auth.access_token(), "Accept": accept}
-    if data is not None:
-        headers["Content-Type"] = "application/json"
-    response = auth.http(method, auth.RESOURCE + path, data=data, headers=headers, timeout=60)
-    if response.status != 200:
+    """401이면 저장된 만료 시각과 상관없이 토큰을 새로 받아 한 번 더. 그래도 401이면 저장된 로그인을 지운다
+    (그래야 대시보드가 '연결됨' 대신 [ChatGPT 연결] 버튼을 보인다)."""
+    for retry in (True, False):
+        headers = {"Authorization": "Bearer " + auth.access_token(), "Accept": accept}
+        if data is not None:
+            headers["Content-Type"] = "application/json"
+        response = auth.http(method, auth.RESOURCE + path, data=data, headers=headers, timeout=60)
+        if response.status == 200:
+            return response
         status = response.status
         response.close()
-        raise LLMError(_MESSAGES.get(status, f"ChatGPT 요청이 실패했어요 (HTTP {status})"), _KINDS.get(status, "error"))
-    return response
+        if status != 401:
+            break
+        if retry:
+            auth.expire()
+        else:
+            auth.logout()
+    raise LLMError(_MESSAGES.get(status, f"ChatGPT 요청이 실패했어요 (HTTP {status})"), _KINDS.get(status, "error"))
 
 
 def collect(lines) -> str:
