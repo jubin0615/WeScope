@@ -1,0 +1,1020 @@
+{
+ "findings": [
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "CRITICAL",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 58
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/bopla_lab/app.py",
+    "line": 48
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/bopla_lab/app.py",
+    "line": 50
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/bopla_lab/app.py",
+    "line": 50
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/business_logic_lab/app.py",
+    "line": 5
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/security_headers_lab/app.py",
+    "line": 15
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/security_headers_lab/app.py",
+    "line": 20
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "challenge/labs/security_headers_lab/app.py",
+    "line": 27
+   }
+  },
+  {
+   "rule_id": "inject-deserialize",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/a9_uckv_lab/app.py",
+    "line": 62
+   }
+  },
+  {
+   "rule_id": "authz-no-auth-write",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/a9_uckv_lab/app.py",
+    "line": 73
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 12
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 44
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 53
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 59
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 65
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 71
+   }
+  },
+  {
+   "rule_id": "authz-no-auth-write",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 131
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/broken_access_lab/main.py",
+    "line": 19
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 16
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 21
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 26
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/command_injection_lab/app.py",
+    "line": 6
+   }
+  },
+  {
+   "rule_id": "inject-command",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/command_injection_lab/app.py",
+    "line": 30
+   }
+  },
+  {
+   "rule_id": "inject-code",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/command_injection_lab/app.py",
+    "line": 49
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/crypto_failure_lab/app.py",
+    "line": 7
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/dependency_attack_lab/app.py",
+    "line": 7
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/dependency_attack_lab/app.py",
+    "line": 11
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/dependency_attack_lab/app.py",
+    "line": 12
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/dependency_attack_lab/app.py",
+    "line": 13
+   }
+  },
+  {
+   "rule_id": "inject-deserialize",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insec_des_lab/main.py",
+    "line": 40
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insecure_design_lab/app.py",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insufficient_logging_lab/app.py",
+    "line": 7
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insufficient_logging_lab/app.py",
+    "line": 15
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insufficient_logging_lab/app.py",
+    "line": 15
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insufficient_logging_lab/templates/lab1.html",
+    "line": 58
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/insufficient_logging_lab/templates/secure-fix.html",
+    "line": 104
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/open_source_library_attack_lab/app.py",
+    "line": 5
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/package_injection_lab/app.py",
+    "line": 7
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/package_injection_lab/app.py",
+    "line": 11
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/package_injection_lab/app.py",
+    "line": 12
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/package_injection_lab/app.py",
+    "line": 13
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sde/app.py",
+    "line": 9
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 12
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 13
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 56
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 57
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 59
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 60
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 63
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 76
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 98
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/templates/lab3.html",
+    "line": 50
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/entrypoint.sh",
+    "line": 11
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/templates/profile.html",
+    "line": 228
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/software_integrity_lab/app.py",
+    "line": 9
+   }
+  },
+  {
+   "rule_id": "inject-deserialize",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/software_integrity_lab/app.py",
+    "line": 44
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/app.py",
+    "line": 7
+   }
+  },
+  {
+   "rule_id": "authz-no-auth-write",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/app.py",
+    "line": 42
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/app.py",
+    "line": 57
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/templates/index.html",
+    "line": 57
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/ssrf_lab/app.py",
+    "line": 6
+   }
+  },
+  {
+   "rule_id": "inject-path",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/ssrf_lab/app.py",
+    "line": 22
+   }
+  },
+  {
+   "rule_id": "inject-ssrf",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/ssrf_lab/app.py",
+    "line": 37
+   }
+  },
+  {
+   "rule_id": "authz-admin-route",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/ssrf_lab/app.py",
+    "line": 53
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/xxe_lab/app.py",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "authz-no-auth-write",
+   "severity": "HIGH",
+   "location": {
+    "file": "dockerized_labs/xxe_lab/app.py",
+    "line": 51
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "pygoat/settings.py",
+    "line": 23
+   }
+  },
+  {
+   "rule_id": "git-hygiene",
+   "severity": "MEDIUM",
+   "location": {
+    "file": ".gitignore",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/labs/bopla_lab/app.py",
+    "line": 152
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/labs/business_logic_lab/app.py",
+    "line": 200
+   }
+  },
+  {
+   "rule_id": "inject-open-redirect",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/labs/security_headers_lab/app.py",
+    "line": 189
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/labs/security_headers_lab/app.py",
+    "line": 233
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/templates/challenge.html",
+    "line": 51
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/views.py",
+    "line": 374
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/views.py",
+    "line": 408
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "challenge/views.py",
+    "line": 572
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/a9_uckv_lab/app.py",
+    "line": 124
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 208
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 227
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/app.py",
+    "line": 238
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/auth_failure_lab/instance/auth.db",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/broken_access_lab/main.py",
+    "line": 70
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 64
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 66
+   }
+  },
+  {
+   "rule_id": "config-weak-hash",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 103
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/broken_auth_lab/app.py",
+    "line": 147
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/command_injection_lab/app.py",
+    "line": 52
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/command_injection_lab/app.py",
+    "line": 60
+   }
+  },
+  {
+   "rule_id": "config-weak-hash",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/crypto_failure_lab/app.py",
+    "line": 25
+   }
+  },
+  {
+   "rule_id": "config-weak-hash",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/crypto_failure_lab/app.py",
+    "line": 38
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/dependency_attack_lab/app.py",
+    "line": 198
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/insec_des_lab/main.py",
+    "line": 54
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/insecure_design_lab/app.py",
+    "line": 153
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/insecure_design_lab/instance/tickets.db",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/insecure_design_lab/templates/lab.html",
+    "line": 22
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/insufficient_logging_lab/app.py",
+    "line": 96
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/open_source_library_attack_lab/app.py",
+    "line": 259
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/package_injection_lab/app.py",
+    "line": 260
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sde/app.py",
+    "line": 7
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sde/app.py",
+    "line": 49
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sec_misconfig/app.py",
+    "line": 135
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py",
+    "line": 11
+   }
+  },
+  {
+   "rule_id": "config-allowed-hosts",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py",
+    "line": 13
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/templates/login.html",
+    "line": 59
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sensitive_data_exposure/templates/login.html",
+    "line": 64
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/software_integrity_lab/app.py",
+    "line": 40
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/software_integrity_lab/app.py",
+    "line": 90
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/app.py",
+    "line": 69
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/app.py",
+    "line": 78
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/sql_injection_lab/database.db",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/ssrf_lab/templates/lab2.html",
+    "line": 26
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/template_injection_lab/app.py",
+    "line": 104
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/template_injection_lab/app.py",
+    "line": 113
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/template_injection_lab/app.py",
+    "line": 123
+   }
+  },
+  {
+   "rule_id": "inject-open-redirect",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xss_lab/app.py",
+    "line": 84
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xss_lab/templates/index.html",
+    "line": 114
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xss_lab/templates/lab1.html",
+    "line": 30
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xss_lab/templates/lab1.html",
+    "line": 55
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xss_lab/templates/lab2.html",
+    "line": 24
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xxe_lab/app.py",
+    "line": 95
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "dockerized_labs/xxe_lab/instance/comments.db",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "inject-xss-template",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "introduction/templates/Lab/XSS/xss.html",
+    "line": 127
+   }
+  },
+  {
+   "rule_id": "config-debug",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "pygoat/settings.py",
+    "line": 28
+   }
+  }
+ ]
+}

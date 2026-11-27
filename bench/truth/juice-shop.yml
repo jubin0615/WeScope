@@ -1,0 +1,206 @@
+# OWASP Juice Shop 취약점 정답지 (We-Scope 검증용)
+# 근거: data/static/challenges.yml(챌린지 118개)·코드의 `vuln-code-snippet` 표시·challengeUtils.solveIf 위치·실제 코드 확인.
+# static 구분
+#   static      코드에 흔적이 있고 규칙 기반 정적 분석으로 찾을 수 있는 것 → 탐지율의 분모
+#   logic       코드에는 있지만 업무 로직을 이해해야 하는 것 (규칙으로는 사실상 불가, ChatGPT 보완 탐지 대상)
+#   runtime     런타임·데이터·OSINT·클라이언트 동작이라 정적으로 찾을 수 없는 것
+#   unsupported We-Scope 지원 범위 밖 (의존성 취약점 SCA, Solidity, 컨테이너 이미지)
+# rules: 이 항목을 맞혔다고 볼 We-Scope rule_id. 비어 있으면 대응 규칙이 없다.
+# 일치 판정: 같은 파일 + line(~end) ±3줄 + rules 중 하나. line 0은 파일 단위. also는 같은 취약점의 다른 위치.
+# source: review = 챌린지가 아니라 코드 검토로 넣은 항목. OWASP 2025는 cwe에서 wescope.taxonomy.owasp.classify로 계산.
+app: juice-shop
+repo: https://github.com/juice-shop/juice-shop
+commit: c9f99228d9d56afb5f5ca7925376292f7fa44b13
+challenge_source: data/static/challenges.yml
+tolerance: 3
+items:
+  # ---- 주입 ----
+  - {id: JS-01, title: "로그인 SQL 문자열 결합", file: routes/login.ts, line: 34, cwe: CWE-89, rules: [inject-sql], static: static,
+     challenges: [loginAdminChallenge, loginBenderChallenge, loginJimChallenge, ephemeralAccountantChallenge, ghostLoginChallenge]}
+  - {id: JS-02, title: "상품 검색 SQL 문자열 결합", file: routes/search.ts, line: 23, cwe: CWE-89, rules: [inject-sql], static: static,
+     challenges: [unionSqlInjectionChallenge, dbSchemaChallenge, christmasSpecialChallenge]}
+  - {id: JS-03, title: "리뷰 조회 MongoDB $where에 입력 결합", file: routes/showProductReviews.ts, line: 36, cwe: CWE-943, rules: [], static: static,
+     challenges: [noSqlCommandChallenge]}
+  - {id: JS-04, title: "주문 추적 MongoDB $where에 입력 결합", file: routes/trackOrder.ts, line: 18, cwe: CWE-943, rules: [], static: static,
+     challenges: [noSqlOrdersChallenge]}
+  - {id: JS-05, title: "리뷰 수정 조건에 req.body.id 그대로 (연산자 주입·multi)", file: routes/updateProductReviews.ts, line: 18, end: 20, cwe: CWE-943, rules: [], static: static,
+     challenges: [noSqlReviewsChallenge]}
+  - {id: JS-06, title: "사용자 이름 #{...}를 eval", file: routes/userProfile.ts, line: 65, cwe: CWE-94, rules: [inject-code], static: static,
+     challenges: [sstiChallenge]}
+  - {id: JS-07, title: "B2B 주문 입력을 vm.runInContext(safeEval)로 실행", file: routes/b2bOrder.ts, line: 23, cwe: CWE-94, rules: [inject-code], static: static,
+     challenges: [rceChallenge, rceOccupyChallenge]}
+  - {id: JS-41, title: "업로드한 YAML을 js-yaml 3.x load (메모리 폭탄)", file: routes/fileUpload.ts, line: 114, cwe: CWE-776, rules: [inject-deserialize], static: static,
+     challenges: [yamlBombChallenge]}
+  - {id: JS-17, title: "XML 파서 XML_PARSE_NOENT·DTDLOAD (XXE)", file: lib/xml.ts, line: 35, cwe: CWE-611, rules: [], static: static,
+     challenges: [xxeFileDisclosureChallenge, xxeDosChallenge]}
+  # ---- XSS ----
+  - {id: JS-08, title: "검색어를 bypassSecurityTrustHtml (DOM XSS)", file: frontend/src/app/search-result/search-result.component.ts, line: 146, cwe: CWE-79, rules: [inject-xss], static: static,
+     challenges: [localXssChallenge, xssBonusChallenge]}
+  - {id: JS-09, title: "상품 설명을 bypassSecurityTrustHtml", file: frontend/src/app/search-result/search-result.component.ts, line: 113, cwe: CWE-79, rules: [inject-xss], static: static,
+     challenges: [restfulXssChallenge]}
+  - {id: JS-10, title: "주문 번호를 bypassSecurityTrustHtml", file: frontend/src/app/track-result/track-result.component.ts, line: 49, cwe: CWE-79, rules: [inject-xss], static: static,
+     challenges: [reflectedXssChallenge]}
+  - {id: JS-11, title: "true-client-ip 헤더 저장 후 bypassSecurityTrustHtml", file: frontend/src/app/last-login-ip/last-login-ip.component.ts, line: 40, also: ["routes/saveLoginIp.ts:16"], cwe: CWE-79, rules: [inject-xss], static: static,
+     challenges: [httpHeaderXssChallenge]}
+  - {id: JS-12, title: "피드백 댓글을 bypassSecurityTrustHtml (서버는 sanitize-html 1.4.2)", file: frontend/src/app/about/about.component.ts, line: 120, also: ["frontend/src/app/administration/administration.component.ts:92"], cwe: CWE-79, rules: [inject-xss], static: static,
+     challenges: [persistedXssFeedbackChallenge]}
+  - {id: JS-13, title: "관리자 화면에서 사용자 이메일을 bypassSecurityTrustHtml", file: frontend/src/app/administration/administration.component.ts, line: 74, also: ["models/user.ts:49"], cwe: CWE-79, rules: [inject-xss], static: static,
+     challenges: [persistedXssUserChallenge]}
+  - {id: JS-42, title: "사용자 이름을 pug 템플릿 문자열에 넣어 compile, CSP에 profileImage 결합", file: routes/userProfile.ts, line: 73, end: 90, cwe: CWE-79, rules: [inject-xss, inject-code], static: static,
+     challenges: [usernameXssChallenge]}
+  # ---- 경로·SSRF·리다이렉트 ----
+  - {id: JS-14, title: "프로필 이미지 URL을 서버가 fetch", file: routes/profileImageUrlUpload.ts, line: 24, cwe: CWE-918, rules: [inject-ssrf], static: static,
+     challenges: [ssrfChallenge]}
+  - {id: JS-15, title: "zip 항목 이름으로 파일 쓰기 (Zip Slip)", file: routes/fileUpload.ts, line: 34, cwe: CWE-22, rules: [inject-path], static: static,
+     challenges: [fileWriteChallenge]}
+  - {id: JS-16, title: "res.render에 req.body 펼침 (layout으로 임의 파일 읽기)", file: routes/dataErasure.ts, line: 107, cwe: CWE-22, rules: [inject-path], static: static,
+     challenges: [lfrChallenge]}
+  - {id: JS-18, title: "리다이렉트 허용 목록을 includes()로 비교", file: routes/redirect.ts, line: 18, also: ["lib/insecurity.ts:136"], cwe: CWE-601, rules: [inject-open-redirect], static: static,
+     challenges: [redirectChallenge]}
+  # ---- 노출·설정 ----
+  - {id: JS-19, title: "/ftp 디렉터리 목록 공개 (serve-index)", file: server.ts, line: 294, cwe: CWE-548, rules: [], static: static,
+     challenges: [directoryListingChallenge]}
+  - {id: JS-20, title: "/support/logs 로그 디렉터리 공개", file: server.ts, line: 306, cwe: CWE-532, rules: [], static: static,
+     challenges: [accessLogDisclosureChallenge]}
+  - {id: JS-43, title: "/infrastructure IaC 파일 디렉터리 공개", file: server.ts, line: 273, cwe: CWE-548, rules: [], static: static,
+     challenges: [misplacedIacFiles]}
+  - {id: JS-37, title: "/metrics 인증 없이 공개", file: server.ts, line: 771, cwe: CWE-200, rules: [authz-admin-route], static: static,
+     challenges: [exposedMetricsChallenge]}
+  - {id: JS-39, title: "현재 사용자 정보를 JSONP(callback)로 응답", file: routes/currentUser.ts, line: 58, cwe: CWE-200, rules: [], static: static,
+     challenges: [emailLeakChallenge]}
+  - {id: JS-35, title: "errorhandler()로 스택 트레이스 노출", file: server.ts, line: 722, cwe: CWE-209, rules: [config-error-exposure, config-debug], static: static,
+     challenges: [errorHandlingChallenge]}
+  - {id: JS-38, title: "비밀번호 재설정 속도 제한 키를 X-Forwarded-For 헤더로", file: server.ts, line: 378, cwe: CWE-348, rules: [], static: static,
+     challenges: [resetPasswordMortyChallenge]}
+  - {id: JS-40, title: "토큰 쿠키에 SameSite 없음 + 프로필 변경이 쿠키 인증 (CSRF)", file: routes/updateUserProfile.ts, line: 42, also: ["lib/insecurity.ts:192"], cwe: CWE-352, rules: [config-cookie-flags, authz-csrf-exempt], static: static,
+     challenges: [csrfChallenge]}
+  # ---- 인가 ----
+  - {id: JS-36, title: "PUT /api/Products/:id 인증 미들웨어 주석 처리 (finale-rest 자동 API)", file: server.ts, line: 402, cwe: CWE-862, rules: [authz-no-auth-write], static: static,
+     challenges: [changeProductChallenge]}
+  - {id: JS-44, title: "장바구니 조회가 :id만으로 (소유자 확인 없음)", file: routes/basket.ts, line: 19, cwe: CWE-639, rules: [authz-idor], static: static,
+     challenges: [basketAccessChallenge]}
+  # ---- 비밀값·암호 ----
+  - {id: JS-21, title: "JWT RSA 개인키 하드코딩", file: lib/insecurity.ts, line: 21, cwe: CWE-321, rules: [secret-hardcoded], static: static, source: review, challenges: []}
+  - {id: JS-22, title: "HMAC 키 하드코딩", file: lib/insecurity.ts, line: 44, cwe: CWE-798, rules: [secret-hardcoded, config-weak-secret], static: static, source: review, challenges: []}
+  - {id: JS-23, title: "비밀번호를 MD5로 해시", file: lib/insecurity.ts, line: 43, also: ["models/user.ts:73"], cwe: CWE-328, rules: [config-weak-hash], static: static,
+     challenges: [weirdCryptoChallenge]}
+  - {id: JS-24, title: "진행 코드 Hashids salt 하드코딩", file: routes/continueCode.ts, line: 13, end: 25, cwe: CWE-321, rules: [secret-hardcoded, config-weak-secret], static: static,
+     challenges: [continueCodeChallenge]}
+  - {id: JS-26, title: "로그인 화면 코드에 테스트 계정 비밀번호", file: frontend/src/app/login/login.component.ts, line: 73, cwe: CWE-798, rules: [secret-hardcoded, secret-client-bundle], static: static,
+     challenges: [exposedCredentialsChallenge]}
+  - {id: JS-27, title: "시드 데이터에 평문 비밀번호 (admin123 등)", file: data/static/users.yml, line: 3, end: 296, cwe: CWE-798, rules: [secret-hardcoded, config-default-credential], static: static,
+     challenges: [weakPasswordChallenge]}
+  - {id: JS-28, title: "2FA TOTP 비밀값 평문 저장", file: data/static/users.yml, line: 151, cwe: CWE-312, rules: [secret-hardcoded], static: static,
+     challenges: [twoFactorAuthUnsafeSecretStorageChallenge]}
+  - {id: JS-29, title: "premium.key 커밋", file: encryptionkeys/premium.key, line: 0, cwe: CWE-540, rules: [secret-credential-file], static: static,
+     challenges: [premiumPaywallChallenge]}
+  - {id: JS-30, title: "Terraform에 RSA 개인키", file: infrastructure/terraform/networking.tf, line: 171, also: ["terraform/networking.tf:171"], cwe: CWE-798, rules: [secret-hardcoded], static: static,
+     challenges: [iacLeakedKeyChallenge]}
+  - {id: JS-31, title: "개발자 백업 파일 ftp/package.json.bak", file: ftp/package.json.bak, line: 0, cwe: CWE-530, rules: [secret-data-file], static: static,
+     challenges: [forgottenDevBackupChallenge]}
+  - {id: JS-32, title: "영업 백업 파일 ftp/coupons_2013.md.bak", file: ftp/coupons_2013.md.bak, line: 0, cwe: CWE-530, rules: [secret-data-file], static: static,
+     challenges: [forgottenBackupChallenge]}
+  - {id: JS-33, title: "jws.verify에 알고리즘 고정 없음 + express-jwt 0.1.3 (alg none·키 혼동)", file: lib/insecurity.ts, line: 55, also: ["lib/insecurity.ts:52"], cwe: CWE-347, rules: [authz-jwt-no-verify], static: static,
+     challenges: [jwtUnsignedChallenge, jwtForgedChallenge]}
+  # ---- 업무 로직 (logic) ----
+  - {id: JS-L01, title: "fields 파라미터로 비밀번호 해시까지 응답", file: routes/currentUser.ts, line: 30, cwe: CWE-213, rules: [], static: logic, challenges: [passwordHashLeakChallenge]}
+  - {id: JS-L02, title: "회원가입 시 role을 요청 본문에서 받음 (대량 할당)", file: server.ts, line: 550, cwe: CWE-915, rules: [], static: logic, challenges: [registerAdminChallenge]}
+  - {id: JS-L03, title: "CAPTCHA 답을 재사용 가능", file: routes/captcha.ts, line: 0, cwe: CWE-804, rules: [], static: logic, challenges: [captchaBypassChallenge]}
+  - {id: JS-L04, title: "현재 비밀번호 없이 GET으로 비밀번호 변경", file: routes/changePassword.ts, line: 0, cwe: CWE-620, rules: [], static: logic, challenges: [changePasswordBenderChallenge]}
+  - {id: JS-L05, title: "폐기된 B2B XML 업로드 경로가 살아 있음", file: routes/fileUpload.ts, line: 76, cwe: CWE-1059, rules: [], static: logic, challenges: [deprecatedInterfaceChallenge]}
+  - {id: JS-L06, title: "확장자 검사 뒤 %00 잘라내기 (Poison Null Byte)", file: routes/fileServer.ts, line: 27, cwe: CWE-158, rules: [], static: logic,
+     challenges: [nullByteChallenge, easterEggLevelOneChallenge, misplacedSignatureFileChallenge]}
+  - {id: JS-L07, title: "빈 이메일·비밀번호로 가입", file: models/user.ts, line: 0, cwe: CWE-20, rules: [], static: logic, challenges: [emptyUserRegistration]}
+  - {id: JS-L08, title: "쿠폰 만료를 클라이언트 시각(orderDetails)으로 판단", file: routes/order.ts, line: 0, cwe: CWE-602, rules: [], static: logic, challenges: [manipulateClockChallenge]}
+  - {id: JS-L09, title: "피드백 삭제 권한 확인 부족", file: server.ts, line: 393, cwe: CWE-285, rules: [], static: logic, challenges: [feedbackChallenge]}
+  - {id: JS-L10, title: "쿠폰이 비밀 없는 z85 인코딩", file: lib/insecurity.ts, line: 0, cwe: CWE-327, rules: [], static: logic, challenges: [forgedCouponChallenge]}
+  - {id: JS-L11, title: "피드백 작성자 UserId를 본문에서 받음", file: routes/verify.ts, line: 31, cwe: CWE-639, rules: [], static: logic, challenges: [forgedFeedbackChallenge]}
+  - {id: JS-L12, title: "리뷰 작성자·수정 대상 소유자 확인 없음", file: routes/updateProductReviews.ts, line: 16, also: ["routes/createProductReviews.ts:18"], cwe: CWE-639, rules: [authz-idor], static: logic, challenges: [forgedReviewChallenge]}
+  - {id: JS-L13, title: "데이터 내보내기가 이메일 비교를 느슨하게", file: routes/dataExport.ts, line: 0, cwe: CWE-639, rules: [], static: logic, challenges: [dataExportChallenge]}
+  - {id: JS-L14, title: "OAuth 사용자 비밀번호가 이메일 역순 base64", file: frontend/src/app/oauth/oauth.component.ts, line: 0, cwe: CWE-640, rules: [], static: logic, challenges: [oauthUserPasswordChallenge]}
+  - {id: JS-L15, title: "장바구니 항목 BasketId 파라미터 오염", file: routes/basketItems.ts, line: 45, cwe: CWE-235, rules: [], static: logic, challenges: [basketManipulateChallenge]}
+  - {id: JS-L16, title: "좋아요 경쟁 조건", file: routes/likeProductReviews.ts, line: 0, cwe: CWE-362, rules: [], static: logic, challenges: [timingAttackChallenge]}
+  - {id: JS-L17, title: "허용 목록에 더 안 쓰는 암호화폐 주소", file: lib/insecurity.ts, line: 124, cwe: CWE-601, rules: [], static: logic, challenges: [redirectCryptoCurrencyChallenge]}
+  - {id: JS-L18, title: "음수 수량 주문", file: routes/order.ts, line: 144, also: ["routes/basketItems.ts:0"], cwe: CWE-20, rules: [], static: logic, challenges: [negativeOrderChallenge]}
+  - {id: JS-L19, title: "비밀번호 확인란 검증을 서버가 안 함", file: models/user.ts, line: 0, cwe: CWE-20, rules: [], static: logic, challenges: [passwordRepeatChallenge]}
+  - {id: JS-L20, title: "업로드 크기 제한이 클라이언트에만", file: routes/fileUpload.ts, line: 57, cwe: CWE-434, rules: [], static: logic, challenges: [uploadSizeChallenge]}
+  - {id: JS-L21, title: "업로드 형식 제한이 클라이언트에만", file: routes/fileUpload.ts, line: 65, cwe: CWE-434, rules: [], static: logic, challenges: [uploadTypeChallenge]}
+  - {id: JS-L22, title: "자막 파일 내용을 script 태그에 그대로", file: routes/videoHandler.ts, line: 69, cwe: CWE-79, rules: [], static: logic, challenges: [videoXssChallenge]}
+  - {id: JS-L23, title: "별점 0 피드백 허용", file: models/feedback.ts, line: 59, cwe: CWE-20, rules: [], static: logic, challenges: [zeroStarsChallenge]}
+  - {id: JS-L24, title: "결제 수단 없이 Deluxe 가입", file: routes/deluxe.ts, line: 44, cwe: CWE-840, rules: [], static: logic, challenges: [freeDeluxeChallenge]}
+  - {id: JS-L25, title: "챗봇이 할인율을 도구 인자로 정함 (서버 상한 없음)", file: routes/chat.ts, line: 180, end: 185, cwe: CWE-1426, rules: [], static: logic,
+     challenges: [chatbotPromptInjectionChallenge, chatbotGreedyInjectionChallenge, systemPromptExtractionChallenge]}
+  - {id: JS-L26, title: "챗봇 디버그 정보를 일반 사용자에게", file: routes/chat.ts, line: 222, cwe: CWE-200, rules: [], static: logic, challenges: [aiDebuggingChallenge]}
+  - {id: JS-L27, title: "Passkey 서명 검증 우회", file: routes/passkey.ts, line: 222, cwe: CWE-347, rules: [], static: logic, challenges: [passkeySignatureChallenge]}
+  - {id: JS-L28, title: "Passkey 공개키 덮어쓰기", file: routes/passkey.ts, line: 142, cwe: CWE-639, rules: [], static: logic, challenges: [passkeyCredentialOverwriteChallenge]}
+  # ---- 런타임·OSINT·클라이언트 (runtime) ----
+  - {id: JS-R01, title: "관리자 화면 경로가 프런트 라우팅에만 숨겨짐", file: frontend/src/app/app.routing.ts, line: 80, rules: [], static: runtime, challenges: [adminSectionChallenge]}
+  - {id: JS-R02, title: "숨겨진 프런트 경로 찾기", file: frontend/src/app/app.routing.ts, line: 0, rules: [], static: runtime,
+     challenges: [scoreBoardChallenge, web3SandboxChallenge, tokenSaleChallenge]}
+  - {id: JS-R03, title: "보안 질문 답을 OSINT로 추측", rules: [], static: runtime,
+     challenges: [resetPasswordBjoernOwaspChallenge, resetPasswordBenderChallenge, resetPasswordBjoernChallenge, resetPasswordJimChallenge,
+                  resetPasswordUvoginChallenge, geoStalkingMetaChallenge, geoStalkingVisualChallenge]}
+  - {id: JS-R04, title: "유출·추측 가능한 사용자 비밀번호로 로그인", rules: [], static: runtime,
+     challenges: [loginAmyChallenge, loginRapperChallenge, loginSupportChallenge, dlpPasswordSprayingChallenge]}
+  - {id: JS-R05, title: "공개 자료·사이트 탐색으로 찾는 것", rules: [], static: runtime,
+     challenges: [nftUnlockChallenge, extraLanguageChallenge, easterEggLevelTwoChallenge, privacyPolicyChallenge, privacyPolicyProofChallenge,
+                  securityPolicyChallenge, retrieveBlueprintChallenge, hiddenImageChallenge, missingEncodingChallenge, svgInjectionChallenge,
+                  closeNotificationsChallenge, dlpPastebinDataLeakChallenge, leakedApiKeyChallenge]}
+  # ---- 지원 범위 밖 (unsupported) ----
+  - {id: JS-U01, title: "의존성·공급망 취약점 (SCA)", file: package.json, line: 0, rules: [], static: unsupported,
+     challenges: [typosquattingAngularChallenge, typosquattingNpmChallenge, knownVulnerableComponentChallenge, supplyChainAttackChallenge, csafChallenge]}
+  - {id: JS-U02, title: "취약한 컨테이너 이미지 mongo:4.4.29", file: infrastructure/docker-compose.yml, line: 59, rules: [], static: unsupported, challenges: [vulnerableDockerImageChallenge]}
+  - {id: JS-U03, title: "Solidity 스마트 컨트랙트", file: data/static/web3-snippets/HoneyPotNFT.sol, line: 0, rules: [], static: unsupported,
+     challenges: [nftMintChallenge, web3WalletChallenge]}
+
+# 정답지에 없는 We-Scope 발견을 직접 코드로 보고 판정 (위에서부터 처음 맞는 규칙).
+#   real  실제 문제 (정답지 보강)   fp  오탐   noise  실행되지 않는 예제·테스트 코드라 실제 위험은 아님
+verdicts:
+  - {file: "data/static/codefixes/*", verdict: noise, why: "코딩 챌린지용 예제 코드 (실행 안 됨)"}
+  - {file: "test/*", verdict: noise, why: "테스트 코드의 테스트 계정·TODO"}
+  - {rule: secret-hardcoded, file: "frontend/src/assets/i18n/*", verdict: fp, why: "\"LABEL_PASSWORD\": \"Password\" 같은 화면 번역 문구"}
+  - {rule: config-security-todo, verdict: fp, why: "three.js 라이브러리·타입 정의 FIXME·안내 문구 TODO로 보안 조치가 빠진 곳이 아님"}
+  - {rule: authz-jwt-no-verify, file: routes/authenticatedUsers.ts, verdict: fp, why: "서버가 발급해 보관한 토큰에서 iat만 읽음, 인증 판단에 쓰지 않음"}
+  - {rule: inject-path, file: "routes/vulnCode*.ts", verdict: fp, why: "key가 실제 챌린지 키일 때만 파일을 읽음 (없으면 404)"}
+  - {rule: inject-path, file: routes/profileImageFileUpload.ts, verdict: fp, why: "경로가 로그인 사용자 id와 파일 형식 감지 결과로만 만들어짐"}
+  - {rule: secret-credential-file, file: ctf.key, verdict: real, why: "CTF 플래그 HMAC 키가 저장소에 있음"}
+  - {rule: secret-data-file, file: "ftp/*", verdict: real, why: "공개 ftp 폴더의 백업 파일"}
+  - {rule: git-hygiene, verdict: real, why: ".gitignore에 비밀 파일 패턴이 없음 (권고)"}
+  - {rule: config-weak-secret, file: server.ts, verdict: real, why: "cookieParser('kekse') 쿠키 서명 비밀이 짧은 고정값"}
+  - {rule: authz-admin-route, file: server.ts, verdict: real, why: "/rest/admin/application-version·configuration이 인증 없이 버전·설정을 노출 (알려진 취약 라이브러리 찾기에 쓰임)"}
+  - {rule: config-cookie-flags, verdict: real, why: "토큰 쿠키에 httpOnly·secure·sameSite 없음"}
+  - {rule: config-error-exposure, file: lib/utils.ts, verdict: real, why: "getErrorMessage가 error.message를 여러 API 응답에 그대로 보냄"}
+  - {rule: config-cors-wildcard, verdict: real, why: "모든 출처 CORS 허용"}
+
+# 놓친 이유 (규칙·코드를 직접 보고 확인). 비어 있으면 compare.py가 "규칙 없음"/"규칙은 있지만 못 찾음"으로 채운다.
+misses:
+  JS-03: "규칙 없음 — NoSQL($where) 주입 sink가 없음"
+  JS-04: "규칙 없음 — NoSQL($where) 주입 sink가 없음"
+  JS-05: "규칙 없음 — MongoDB 조건 객체에 입력을 그대로 넣는 패턴 없음"
+  JS-07: "sink 없음(vm.runInContext는 목록에 없음) + source 미인식(({ body }) 구조 분해)"
+  JS-08: "sink 없음 — Angular bypassSecurityTrustHtml을 XSS sink로 보지 않음"
+  JS-09: "sink 없음 — Angular bypassSecurityTrustHtml"
+  JS-10: "sink 없음 — Angular bypassSecurityTrustHtml"
+  JS-11: "sink 없음 — Angular bypassSecurityTrustHtml (헤더 저장과 출력이 다른 파일)"
+  JS-12: "sink 없음 — Angular bypassSecurityTrustHtml"
+  JS-13: "sink 없음 — Angular bypassSecurityTrustHtml"
+  JS-15: "source 미인식 — zip 항목 이름(entry.path)을 외부 입력으로 보지 않음"
+  JS-16: "sink 없음 — res.render 옵션에 req.body를 펼치는 패턴"
+  JS-17: "규칙 없음 — XXE(외부 엔티티 허용 파서 옵션) 규칙이 없음"
+  JS-18: "source 미인식 — ({ query }: Request) 구조 분해라 req.query로 보지 않음"
+  JS-19: "규칙 없음 — 디렉터리 목록(serve-index) 노출 규칙이 없음"
+  JS-20: "규칙 없음 — 디렉터리 목록(serve-index) 노출 규칙이 없음"
+  JS-22: "변수 이름 없이 createHmac 인자에 바로 쓴 문자열이라 비밀값으로 보지 않음"
+  JS-23: "약한 해시는 앞뒤 3줄에 password 단어가 있어야 잡음 (hash 함수가 따로 정의됨)"
+  JS-24: "Hashids 생성자 인자의 salt를 비밀값으로 보지 않음"
+  JS-26: "값에 'Testing'이 들어 있어 자리표시자(test)로 보고 버림"
+  JS-33: "jwt.decode 없이 jws.verify만 씀 — 알고리즘 고정 누락은 규칙이 보지 않음"
+  JS-35: "errorhandler() 미들웨어 사용은 패턴에 없음 (err.stack·message 반환만 봄)"
+  JS-36: "finale-rest 자동 REST API는 라우트로 인식하지 않음"
+  JS-37: "/metrics는 관리자 경로로 보지 않음, 읽기 라우트 인증 누락 규칙 없음"
+  JS-38: "규칙 없음 — 신뢰할 수 없는 프록시 헤더로 속도 제한 키를 만드는 패턴"
+  JS-39: "규칙 없음 — JSONP 응답"
+  JS-41: "yaml.load가 vm.runInContext 문자열 안에 있어 호출로 보이지 않음 (js-yaml 3.x)"
+  JS-42: "sink 없음 — 문자열로 만든 pug 템플릿을 compile"
+  JS-43: "규칙 없음 — 디렉터리 목록(serve-index) 노출 규칙이 없음"
+  JS-44: "라우트(server.ts)와 처리 함수(routes/basket.ts)가 다른 파일이라 본문을 보지 못함"

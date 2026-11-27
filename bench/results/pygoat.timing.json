@@ -1,0 +1,33 @@
+{
+  "elapsed_sec": 9.7,
+  "files_scanned": 459,
+  "files_total": 463,
+  "findings": 127,
+  "analyzers": {
+    "secrets": [
+      "ok",
+      3.3,
+      ""
+    ],
+    "semgrep": [
+      "ok",
+      4.6,
+      ""
+    ],
+    "routes": [
+      "ok",
+      0.1,
+      ""
+    ],
+    "config": [
+      "ok",
+      0.0,
+      ""
+    ],
+    "insecure_defaults": [
+      "ok",
+      0.0,
+      ""
+    ]
+  }
+}

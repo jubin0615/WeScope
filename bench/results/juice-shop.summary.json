@@ -1,0 +1,26 @@
+{
+  "app": "juice-shop",
+  "commit": "c9f99228d9d56afb5f5ca7925376292f7fa44b13",
+  "files": 1491,
+  "elapsed_sec": 51.2,
+  "challenges": 118,
+  "items": 78,
+  "by_class": {
+    "static": 42,
+    "logic": 28,
+    "runtime": 5,
+    "unsupported": 3
+  },
+  "static_items": 42,
+  "static_found": 12,
+  "recall": 0.286,
+  "challenge_static_items": 40,
+  "challenge_static_found": 11,
+  "findings": 113,
+  "matched": 25,
+  "real_outside": 9,
+  "fp": 58,
+  "noise": 21,
+  "precision": 0.37,
+  "precision_noise_as_fp": 0.301
+}

@@ -1,0 +1,908 @@
+{
+ "findings": [
+  {
+   "rule_id": "secret-credential-file",
+   "severity": "CRITICAL",
+   "location": {
+    "file": "ctf.key",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "secret-credential-file",
+   "severity": "CRITICAL",
+   "location": {
+    "file": "encryptionkeys/premium.key",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "CRITICAL",
+   "location": {
+    "file": "infrastructure/terraform/networking.tf",
+    "line": 171
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "CRITICAL",
+   "location": {
+    "file": "lib/insecurity.ts",
+    "line": 21
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "CRITICAL",
+   "location": {
+    "file": "terraform/networking.tf",
+    "line": 171
+   }
+  },
+  {
+   "rule_id": "git-hygiene",
+   "severity": "HIGH",
+   "location": {
+    "file": ".gitignore",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/accessLogDisclosureChallenge_1_correct.ts",
+    "line": 24
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/accessLogDisclosureChallenge_2.ts",
+    "line": 28
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/accessLogDisclosureChallenge_3.ts",
+    "line": 27
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/accessLogDisclosureChallenge_4.ts",
+    "line": 27
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/dbSchemaChallenge_1.ts",
+    "line": 5
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/dbSchemaChallenge_3.ts",
+    "line": 11
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/directoryListingChallenge_1_correct.ts",
+    "line": 23
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/directoryListingChallenge_2.ts",
+    "line": 27
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/directoryListingChallenge_3.ts",
+    "line": 26
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/directoryListingChallenge_4.ts",
+    "line": 28
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/unionSqlInjectionChallenge_1.ts",
+    "line": 6
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/codefixes/unionSqlInjectionChallenge_3.ts",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 3
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 31
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 63
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 88
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 107
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 115
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 123
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 141
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 150
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 151
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 239
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 277
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "data/static/users.yml",
+    "line": 296
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/bn_BD.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ca_ES.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/de_CH.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/de_CH.json",
+    "line": 188
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/de_DE.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/en.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/es_ES.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ga_IE.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/id_ID.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/it_IT.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 98
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 99
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 100
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 101
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 102
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 157
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 158
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 200
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 221
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ja_JP.json",
+    "line": 222
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/my_MM.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/nl_NL.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/no_NO.json",
+    "line": 188
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/sv_SE.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/sv_SE.json",
+    "line": 188
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/ta_IN.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 97
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 98
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 99
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 100
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 101
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 102
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 157
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 158
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/th_TH.json",
+    "line": 221
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/uk_UA.json",
+    "line": 10
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_CN.json",
+    "line": 98
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_CN.json",
+    "line": 99
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_CN.json",
+    "line": 200
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_CN.json",
+    "line": 222
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_HK.json",
+    "line": 98
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_HK.json",
+    "line": 99
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_TW.json",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_TW.json",
+    "line": 98
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_TW.json",
+    "line": 99
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_TW.json",
+    "line": 102
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_TW.json",
+    "line": 221
+   }
+  },
+  {
+   "rule_id": "secret-hardcoded",
+   "severity": "HIGH",
+   "location": {
+    "file": "frontend/src/assets/i18n/zh_TW.json",
+    "line": 222
+   }
+  },
+  {
+   "rule_id": "authz-jwt-no-verify",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/authenticatedUsers.ts",
+    "line": 20
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/login.ts",
+    "line": 34
+   }
+  },
+  {
+   "rule_id": "inject-path",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/profileImageFileUpload.ts",
+    "line": 42
+   }
+  },
+  {
+   "rule_id": "inject-ssrf",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/profileImageUrlUpload.ts",
+    "line": 24
+   }
+  },
+  {
+   "rule_id": "inject-sql",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/search.ts",
+    "line": 23
+   }
+  },
+  {
+   "rule_id": "inject-code",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/userProfile.ts",
+    "line": 65
+   }
+  },
+  {
+   "rule_id": "inject-path",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/vulnCodeFixes.ts",
+    "line": 83
+   }
+  },
+  {
+   "rule_id": "inject-path",
+   "severity": "HIGH",
+   "location": {
+    "file": "routes/vulnCodeSnippet.ts",
+    "line": 90
+   }
+  },
+  {
+   "rule_id": "config-weak-secret",
+   "severity": "HIGH",
+   "location": {
+    "file": "server.ts",
+    "line": 321
+   }
+  },
+  {
+   "rule_id": "authz-admin-route",
+   "severity": "HIGH",
+   "location": {
+    "file": "server.ts",
+    "line": 645
+   }
+  },
+  {
+   "rule_id": "authz-admin-route",
+   "severity": "HIGH",
+   "location": {
+    "file": "server.ts",
+    "line": 646
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/b2bOrder.spec.ts",
+    "line": 6
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/basket.spec.ts",
+    "line": 4
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/chatbot.spec.ts",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/contact.spec.ts",
+    "line": 11
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/dataErasure.spec.ts",
+    "line": 3
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/noSql.spec.ts",
+    "line": 8
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/profile.spec.ts",
+    "line": 3
+   }
+  },
+  {
+   "rule_id": "config-default-credential",
+   "severity": "HIGH",
+   "location": {
+    "file": "test/cypress/e2e/restApi.spec.ts",
+    "line": 4
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "ftp/coupons_2013.md.bak",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "ftp/package-lock.json.bak",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "secret-data-file",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "ftp/package.json.bak",
+    "line": 0
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "lib/insecurity.ts",
+    "line": 192
+   }
+  },
+  {
+   "rule_id": "config-error-exposure",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "lib/utils.ts",
+    "line": 251
+   }
+  },
+  {
+   "rule_id": "config-cookie-flags",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "routes/updateUserProfile.ts",
+    "line": 42
+   }
+  },
+  {
+   "rule_id": "config-cors-wildcard",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "server.ts",
+    "line": 184
+   }
+  },
+  {
+   "rule_id": "config-cors-wildcard",
+   "severity": "MEDIUM",
+   "location": {
+    "file": "server.ts",
+    "line": 185
+   }
+  },
+  {
+   "rule_id": "config-security-todo",
+   "severity": "INFO",
+   "location": {
+    "file": "frontend/src/assets/private/three.js",
+    "line": 28328
+   }
+  },
+  {
+   "rule_id": "config-security-todo",
+   "severity": "INFO",
+   "location": {
+    "file": "frontend/src/hacking-instructor/challenges/loginJim.ts",
+    "line": 22
+   }
+  },
+  {
+   "rule_id": "config-security-todo",
+   "severity": "INFO",
+   "location": {
+    "file": "server.ts",
+    "line": 28
+   }
+  },
+  {
+   "rule_id": "config-security-todo",
+   "severity": "INFO",
+   "location": {
+    "file": "test/cypress/e2e/basket.spec.ts",
+    "line": 51
+   }
+  }
+ ]
+}

@@ -1,0 +1,112 @@
+# PyGoat 취약점 정답지 (We-Scope 검증용)
+# 근거: challenge/management/commands/populate_labs.py의 실습(lab) 24개와 각 실습 코드의 취약 지점
+#       (코드 주석의 "Vulnerable"·"Intentionally" 표시와 실습 템플릿 설명을 대조).
+# static·rules·일치 판정·verdicts 형식은 juice-shop.yml 머리말과 같다.
+app: pygoat
+repo: https://github.com/adeyosemanputra/pygoat
+commit: 2aa4cc14f251e4a780e94e200aed6b36a5b15c21
+challenges_expected: [a9_uckv_lab, auth_failure_lab, broken_access_lab, broken_auth_lab, command_injection_lab, crypto_failure_lab,
+                      insec_des_lab, insecure_design_lab, insufficient_logging_lab, sde, sec_misconfig, sensitive_data_exposure,
+                      software_integrity_lab, sql_injection_lab, ssrf_lab, template_injection_lab, xss_lab, xxe_lab,
+                      dependency_attack_lab, package_injection_lab, open_source_library_attack_lab, bopla_lab, business_logic_lab,
+                      security_headers_lab]
+tolerance: 3
+items:
+  # a9_uckv_lab (취약한 구성요소)
+  - {id: PG-01, title: "업로드 YAML을 yaml.Loader로 load", file: dockerized_labs/a9_uckv_lab/app.py, line: 62, cwe: CWE-502, rules: [inject-deserialize], static: static, challenges: [a9_uckv_lab]}
+  - {id: PG-02, title: "사용자 수식을 Pillow ImageMath.eval", file: dockerized_labs/a9_uckv_lab/app.py, line: 94, cwe: CWE-95, rules: [inject-code], static: static, challenges: [a9_uckv_lab]}
+  # auth_failure_lab
+  - {id: PG-03, title: "OTP 확인이 쿠키의 email을 믿음", file: dockerized_labs/auth_failure_lab/app.py, line: 119, cwe: CWE-565, rules: [], static: logic, challenges: [auth_failure_lab]}
+  - {id: PG-04, title: "로그인 시도 횟수 제한 없음", file: dockerized_labs/auth_failure_lab/app.py, line: 131, cwe: CWE-307, rules: [], static: logic, challenges: [auth_failure_lab]}
+  - {id: PG-05, title: "세션 정보를 서명 없는 쿠키에", file: dockerized_labs/auth_failure_lab/app.py, line: 216, end: 227, cwe: CWE-565, rules: [], static: logic, challenges: [auth_failure_lab]}
+  - {id: PG-06, title: "약한 비밀번호의 솔트 없는 SHA256 해시를 코드에", file: dockerized_labs/auth_failure_lab/app.py, line: 46, end: 71, also: ["dockerized_labs/auth_failure_lab/app.py:213"], cwe: CWE-916, rules: [config-weak-hash, secret-hardcoded], static: static, challenges: [auth_failure_lab]}
+  - {id: PG-07, title: "약한 SECRET_KEY", file: dockerized_labs/auth_failure_lab/app.py, line: 12, cwe: CWE-321, rules: [config-weak-secret, secret-hardcoded], static: static, challenges: [auth_failure_lab]}
+  # broken_access_lab
+  - {id: PG-08, title: "admin=1 쿠키를 그대로 믿음", file: dockerized_labs/broken_access_lab/main.py, line: 35, also: ["dockerized_labs/broken_access_lab/main.py:60"], cwe: CWE-565, rules: [], static: logic, challenges: [broken_access_lab]}
+  # broken_auth_lab
+  - {id: PG-09, title: "하드코딩한 secret_key", file: dockerized_labs/broken_auth_lab/app.py, line: 16, cwe: CWE-321, rules: [config-weak-secret, secret-hardcoded], static: static, challenges: [broken_auth_lab]}
+  - {id: PG-10, title: "약한 평문 비밀번호 계정", file: dockerized_labs/broken_auth_lab/app.py, line: 21, end: 26, cwe: CWE-521, rules: [secret-hardcoded, config-default-credential], static: static, challenges: [broken_auth_lab]}
+  - {id: PG-11, title: "비밀번호 평문 저장·비교, 복잡도 검사 없음", file: dockerized_labs/broken_auth_lab/app.py, line: 53, end: 84, cwe: CWE-256, rules: [], static: logic, challenges: [broken_auth_lab]}
+  - {id: PG-12, title: "재설정 토큰이 md5(email+시각)", file: dockerized_labs/broken_auth_lab/app.py, line: 103, cwe: CWE-640, rules: [config-weak-hash], static: static, challenges: [broken_auth_lab]}
+  - {id: PG-13, title: "세션 토큰이 base64(이름:시각), 30일 유지", file: dockerized_labs/broken_auth_lab/app.py, line: 57, end: 66, cwe: CWE-330, rules: [], static: logic, challenges: [broken_auth_lab]}
+  - {id: PG-14, title: "debug=True", file: dockerized_labs/broken_auth_lab/app.py, line: 147, cwe: CWE-489, rules: [config-debug], static: static, challenges: [broken_auth_lab]}
+  # command_injection_lab
+  - {id: PG-15, title: "입력을 넣은 명령을 shell=True로 실행", file: dockerized_labs/command_injection_lab/app.py, line: 29, end: 30, cwe: CWE-78, rules: [inject-command], static: static, challenges: [command_injection_lab]}
+  - {id: PG-16, title: "입력을 eval", file: dockerized_labs/command_injection_lab/app.py, line: 49, cwe: CWE-95, rules: [inject-code], static: static, challenges: [command_injection_lab]}
+  # crypto_failure_lab
+  - {id: PG-17, title: "비밀번호 MD5", file: dockerized_labs/crypto_failure_lab/app.py, line: 38, cwe: CWE-328, rules: [config-weak-hash], static: static, challenges: [crypto_failure_lab]}
+  - {id: PG-18, title: "비밀번호 SHA1", file: dockerized_labs/crypto_failure_lab/app.py, line: 25, cwe: CWE-328, rules: [config-weak-hash], static: static, challenges: [crypto_failure_lab]}
+  - {id: PG-19, title: "로그인 쿠키가 서명 없는 base64", file: dockerized_labs/crypto_failure_lab/app.py, line: 91, end: 101, cwe: CWE-565, rules: [], static: logic, challenges: [crypto_failure_lab]}
+  - {id: PG-20, title: "비교문에 하드코딩한 비밀번호 P@$$w0rd", file: dockerized_labs/crypto_failure_lab/app.py, line: 88, cwe: CWE-798, rules: [secret-hardcoded, config-default-credential], static: static, challenges: [crypto_failure_lab]}
+  # insec_des_lab
+  - {id: PG-21, title: "폼 입력을 pickle.loads", file: dockerized_labs/insec_des_lab/main.py, line: 40, cwe: CWE-502, rules: [inject-deserialize], static: static, challenges: [insec_des_lab]}
+  # insecure_design_lab
+  - {id: PG-22, title: "티켓 구매 수량·소유 확인 설계 결함", file: dockerized_labs/insecure_design_lab/app.py, line: 104, end: 136, cwe: CWE-840, rules: [], static: logic, challenges: [insecure_design_lab]}
+  # insufficient_logging_lab
+  - {id: PG-23, title: "비밀번호·권한 변경을 기록하지 않음", file: dockerized_labs/insufficient_logging_lab/app.py, line: 55, end: 77, cwe: CWE-778, rules: [], static: logic, challenges: [insufficient_logging_lab]}
+  - {id: PG-24, title: "로그인 없이 아무 계정 비밀번호·권한 변경", file: dockerized_labs/insufficient_logging_lab/app.py, line: 54, end: 67, cwe: CWE-306, rules: [authz-no-auth-write], static: static, challenges: [insufficient_logging_lab]}
+  # sde (민감 정보 노출)
+  - {id: PG-25, title: "DEBUG=True로 오류 화면에 설정 노출", file: dockerized_labs/sde/app.py, line: 7, cwe: CWE-215, rules: [config-debug], static: static, challenges: [sde]}
+  - {id: PG-26, title: "app.config에 비밀값 하드코딩 (DB·API_KEY·PASS 등)", file: dockerized_labs/sde/app.py, line: 6, end: 15, cwe: CWE-798, rules: [secret-hardcoded, config-weak-secret], static: static, challenges: [sde]}
+  # sec_misconfig
+  - {id: PG-27, title: "X-Host 헤더 값으로 비밀 공개", file: dockerized_labs/sec_misconfig/app.py, line: 30, cwe: CWE-290, rules: [], static: logic, challenges: [sec_misconfig]}
+  - {id: PG-28, title: "app.debug=True + 404 처리기의 비밀값이 디버그 화면에", file: dockerized_labs/sec_misconfig/app.py, line: 8, also: ["dockerized_labs/sec_misconfig/app.py:48"], cwe: CWE-215, rules: [config-debug], static: static, challenges: [sec_misconfig]}
+  - {id: PG-29, title: "JWT 서명 키 secret123", file: dockerized_labs/sec_misconfig/app.py, line: 98, cwe: CWE-321, rules: [config-weak-secret, secret-hardcoded], static: static, challenges: [sec_misconfig]}
+  - {id: PG-30, title: "토큰 발급 시 role을 요청에서 받음", file: dockerized_labs/sec_misconfig/app.py, line: 95, cwe: CWE-269, rules: [], static: logic, challenges: [sec_misconfig]}
+  - {id: PG-31, title: "SENSITIVE_DATA·404 처리기에 비밀값 하드코딩", file: dockerized_labs/sec_misconfig/app.py, line: 12, end: 14, also: ["dockerized_labs/sec_misconfig/app.py:55", "dockerized_labs/sec_misconfig/app.py:58", "dockerized_labs/sec_misconfig/app.py:63"], cwe: CWE-798, rules: [secret-hardcoded], static: static, challenges: [sec_misconfig]}
+  # software_integrity_lab
+  - {id: PG-32, title: "쿠키 값을 pickle.loads", file: dockerized_labs/software_integrity_lab/app.py, line: 44, cwe: CWE-502, rules: [inject-deserialize], static: static, challenges: [software_integrity_lab]}
+  - {id: PG-33, title: "username을 script 안 JS 문자열에 출력", file: dockerized_labs/software_integrity_lab/templates/lab2.html, line: 43, cwe: CWE-79, rules: [inject-xss-template, inject-xss], static: static, challenges: [software_integrity_lab]}
+  # sql_injection_lab
+  - {id: PG-34, title: "f-string SQL", file: dockerized_labs/sql_injection_lab/app.py, line: 51, end: 57, cwe: CWE-89, rules: [inject-sql], static: static, challenges: [sql_injection_lab]}
+  # ssrf_lab
+  - {id: PG-35, title: "폼 값으로 파일 열기 (경로 조작)", file: dockerized_labs/ssrf_lab/app.py, line: 21, end: 22, cwe: CWE-22, rules: [inject-path], static: static, challenges: [ssrf_lab]}
+  - {id: PG-36, title: "폼 URL을 requests.get", file: dockerized_labs/ssrf_lab/app.py, line: 37, cwe: CWE-918, rules: [inject-ssrf], static: static, challenges: [ssrf_lab]}
+  - {id: PG-37, title: "/internal을 위조 가능한 X-Forwarded-For로만 막음", file: dockerized_labs/ssrf_lab/app.py, line: 47, end: 53, cwe: CWE-348, rules: [authz-admin-route], static: static, challenges: [ssrf_lab]}
+  # template_injection_lab
+  - {id: PG-38, title: "제목·본문을 Jinja 템플릿 소스에 넣어 저장 후 렌더 (SSTI)", file: dockerized_labs/template_injection_lab/app.py, line: 25, end: 44, also: ["dockerized_labs/template_injection_lab/app.py:110"], cwe: CWE-1336, rules: [], static: static, challenges: [template_injection_lab]}
+  # xss_lab
+  - {id: PG-39, title: "검색어를 |safe로 출력", file: dockerized_labs/xss_lab/templates/lab1.html, line: 30, cwe: CWE-79, rules: [inject-xss-template], static: static, challenges: [xss_lab]}
+  - {id: PG-40, title: "script 태그만 지우고 |safe로 출력", file: dockerized_labs/xss_lab/templates/lab2.html, line: 24, also: ["dockerized_labs/xss_lab/app.py:65"], cwe: CWE-79, rules: [inject-xss-template], static: static, challenges: [xss_lab]}
+  - {id: PG-41, title: "입력을 script 태그 안에 출력", file: dockerized_labs/xss_lab/templates/lab3.html, line: 28, cwe: CWE-79, rules: [inject-xss-template], static: static, challenges: [xss_lab]}
+  # xxe_lab
+  - {id: PG-42, title: "XML 파서 외부 엔티티 허용", file: dockerized_labs/xxe_lab/app.py, line: 58, cwe: CWE-611, rules: [], static: static, challenges: [xxe_lab]}
+  # 공급망 실습 3개 (패키지 설치·변조를 흉내 냄)
+  - {id: PG-43, title: "의존성 혼동·악성 패키지 흉내", file: dockerized_labs/dependency_attack_lab/app.py, line: 0, rules: [], static: unsupported, challenges: [dependency_attack_lab]}
+  - {id: PG-44, title: "패키지 주입 흉내", file: dockerized_labs/package_injection_lab/app.py, line: 0, rules: [], static: unsupported, challenges: [package_injection_lab]}
+  - {id: PG-45, title: "오픈소스 라이브러리 변조 흉내", file: dockerized_labs/open_source_library_attack_lab/app.py, line: 0, rules: [], static: unsupported, challenges: [open_source_library_attack_lab]}
+  # challenge/labs
+  - {id: PG-46, title: "프로젝트 API가 모든 속성 응답 (BOPLA)", file: challenge/labs/bopla_lab/app.py, line: 110, cwe: CWE-213, rules: [], static: logic, challenges: [bopla_lab]}
+  - {id: PG-47, title: "쿠폰 중복 적용", file: challenge/labs/business_logic_lab/app.py, line: 131, cwe: CWE-840, rules: [], static: logic, challenges: [business_logic_lab]}
+  - {id: PG-48, title: "X-Frame-Options ALLOWALL (클릭재킹)", file: challenge/labs/security_headers_lab/app.py, line: 55, cwe: CWE-1021, rules: [], static: static, challenges: [security_headers_lab]}
+  - {id: PG-49, title: "송금 폼에 CSRF 방어 없음", file: challenge/labs/security_headers_lab/app.py, line: 111, cwe: CWE-352, rules: [], static: logic, challenges: [security_headers_lab]}
+  # sensitive_data_exposure (Django)
+  - {id: PG-50, title: "모든 사용자 카드·SSN을 인증 없이 응답", file: dockerized_labs/sensitive_data_exposure/dataexposure/views.py, line: 126, cwe: CWE-862, rules: [], static: logic, challenges: [sensitive_data_exposure]}
+  - {id: PG-51, title: "API가 카드번호·SSN을 가리지 않고 응답", file: dockerized_labs/sensitive_data_exposure/dataexposure/views.py, line: 100, cwe: CWE-359, rules: [], static: logic, challenges: [sensitive_data_exposure]}
+  - {id: PG-52, title: "템플릿 JS 주석에 관리자 비밀번호", file: dockerized_labs/sensitive_data_exposure/templates/profile.html, line: 228, cwe: CWE-798, rules: [secret-hardcoded], static: static, challenges: [sensitive_data_exposure]}
+
+verdicts:
+  - {rule: secret-hardcoded, file: dockerized_labs/sql_injection_lab/templates/*, verdict: fp, why: "안내문의 SQL 주입 예시 문자열 ('anything' OR '1'='1)"}
+  - {rule: secret-hardcoded, file: "*/templates/*", verdict: noise, why: "실습 안내문·해설에 적힌 정답 계정·코드 예시"}
+  - {rule: inject-xss-template, file: introduction/templates/Lab/XSS/xss.html, verdict: fp, why: "설명문 속 {query|safe} (중괄호 하나, Jinja가 해석하지 않음)"}
+  - {rule: inject-xss-template, file: dockerized_labs/xss_lab/templates/index.html, verdict: fp, why: "설명문 속 {query|safe} (중괄호 하나)"}
+  - {rule: inject-xss-template, file: dockerized_labs/xss_lab/templates/lab1.html, verdict: real, why: "같은 실습 해설 블록의 {{query|safe}}도 실제로 렌더됨"}
+  - {rule: inject-xss-template, file: challenge/templates/challenge.html, verdict: fp, why: "csrf_token|safe — Django가 만든 토큰 값"}
+  - {rule: inject-xss-template, file: dockerized_labs/insecure_design_lab/templates/lab.html, verdict: fp, why: "error는 서버가 정한 고정 문구만 들어감"}
+  - {rule: inject-xss-template, file: dockerized_labs/sensitive_data_exposure/templates/login.html, verdict: fp, why: "Django 폼 필드 위젯 출력 (이미 안전 처리된 HTML)"}
+  - {rule: inject-xss-template, file: dockerized_labs/ssrf_lab/templates/lab2.html, verdict: real, why: "SSRF로 가져온 응답을 |safe로 그대로 출력"}
+  - {rule: authz-no-auth-write, verdict: fp, why: "로그인 폼 처리이거나 사용자 개념이 없는 단일 실습 앱 (DB 쓰기 권한과 무관)"}
+  - {rule: git-hygiene, verdict: real, why: ".gitignore에 비밀 파일 패턴이 없음 (권고)"}
+  - {rule: "secret-*", verdict: real, why: "실습 앱 코드·설정·DB 파일에 하드코딩·커밋된 비밀값"}
+  - {rule: "config-*", verdict: real, why: "디버그·약한 비밀키·쿠키 플래그·오류 노출·ALLOWED_HOSTS 등 실제 위험한 설정"}
+  - {rule: inject-open-redirect, verdict: real, why: "Referer로 되돌아가는 리다이렉트 (낮음)"}
+
+misses:
+  PG-02: "sink 없음 — PIL.ImageMath.eval을 코드 실행 sink로 보지 않음"
+  PG-20: "비교문(==)의 문자열은 비밀값으로 보지 않음 (대입만 봄)"
+  PG-24: "DB 쓰기가 아니라 메모리 dict를 고쳐 쓰기 라우트로 판단하지 않음"
+  PG-33: "규칙 없음 — <script> 안 {{ 변수 }}(JS 문맥 이스케이프) 패턴은 |safe가 없어 안 봄"
+  PG-38: "규칙 없음 — 입력을 템플릿 소스에 넣는 SSTI (파일을 거쳐 render_template)"
+  PG-41: "규칙 없음 — <script> 안 {{ 변수 }}(JS 문맥 이스케이프) 패턴은 |safe가 없어 안 봄"
+  PG-42: "규칙 없음 — XXE(feature_external_ges True) 규칙이 없음"
+  PG-48: "규칙 없음 — 보안 헤더(X-Frame-Options) 설정 검사 없음"

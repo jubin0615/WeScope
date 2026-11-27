@@ -1,0 +1,33 @@
+{
+  "elapsed_sec": 51.2,
+  "files_scanned": 1491,
+  "files_total": 1496,
+  "findings": 113,
+  "analyzers": {
+    "secrets": [
+      "ok",
+      9.7,
+      ""
+    ],
+    "semgrep": [
+      "partial",
+      9.8,
+      "파일 22개를 해석하지 못함"
+    ],
+    "routes": [
+      "partial",
+      0.1,
+      "Python 파일 2개를 해석하지 못함"
+    ],
+    "config": [
+      "partial",
+      0.0,
+      "Python 파일 2개를 해석하지 못함"
+    ],
+    "insecure_defaults": [
+      "ok",
+      0.3,
+      ""
+    ]
+  }
+}
